@@ -3,7 +3,6 @@ packages:
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+  - esbuild
 onlyBuiltDependencies:
   - better-sqlite3
-  - prisma
-  - '@prisma/engines'

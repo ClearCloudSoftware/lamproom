@@ -2,7 +2,7 @@
 ## Learned rules
 - Do not use the macOS Keychain for secret storage; use cross-platform storage so the app also works on Windows.
 - Refer to this project as Lamproom, not FlowBoard, in code, docs, and UI text.
-- Store project data in SQLite accessed through Prisma ORM instead of JSON files, so the database can be swapped later.
+- Store project data in SQLite accessed through Drizzle ORM instead of JSON files, so the database can be swapped later.
 <!-- end claude-reflect -->
 
 ## Layout
@@ -16,7 +16,7 @@
 - `pnpm test:packages` and `pnpm typecheck:packages`: package tests and types. `pnpm test:app`: app tests. `pnpm lint`.
 - `pnpm test:live` calls real providers: OpenRouter costs money and Claude uses the subscription login. Run it only when asked.
 - `pnpm lr-run-flow <flow.yaml>`: run a flow from the CLI.
-- `pnpm db:migrate --name <what>` after changing `packages/cli/prisma/schema.prisma`: writes a migration (SQLite at `<data>/lamproom.db`, through Prisma); the app applies it on its next start. `pnpm install` generates the client.
+- `pnpm db:generate --name <what>` after changing `packages/cli/src/schema.ts`: writes a migration into `packages/cli/drizzle/` (SQLite at `<data>/lamproom.db`, through Drizzle); the app applies it on its next start.
 
 ## UI
 - Build UI from shadcn/ui components in `components/ui/`. When one is missing, add it with `pnpm dlx shadcn@latest add <name>` (configured in `components.json`) instead of hand-rolling it.

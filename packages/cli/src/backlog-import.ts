@@ -16,11 +16,13 @@ import { keyTasks, type ParsedTask } from '@lamproom/core';
 import { parseMarkdown } from '@lamproom/adapters';
 import { readAppSettings } from './app-settings.ts';
 import { isFile } from './config.ts';
+import { and, eq } from 'drizzle-orm';
 import { db } from './db.ts';
 import { readArtifact, readRun, type RunStatus } from './flow-logs.ts';
 import { startRun } from './flow-start.ts';
 import { internalFlowText } from './internal-steps.ts';
 import { owns, type Project } from './projects.ts';
+import { backlogImports } from './schema.ts';
 import { upsertTasks, type UpsertCounts } from './tasks.ts';
 
 /** A backlog larger than this is not one a person keeps by hand. */
@@ -71,7 +73,7 @@ export async function importBacklog(dataDir: string, runsDir: string, project: P
     const res = await byParser(dataDir, project.id, read.text, `the importer agent did not start: ${r.error}`);
     return res.status === 'done' ? { ok: true, imported: res.imported } : { ok: false, status: 422, error: res.error };
   }
-  await db(dataDir).backlogImport.create({ data: { run: r.name, projectId: project.id, text: read.text } });
+  db(dataDir).insert(backlogImports).values({ run: r.name, projectId: project.id, text: read.text }).run();
   return { ok: true, run: r.name };
 }
 
@@ -119,14 +121,14 @@ const lookRun = (runsDir: string): RunLook => (run) => {
  * still running.
  */
 export async function agentImport(dataDir: string, runsDir: string, projectId: string, run: string, look: RunLook = lookRun(runsDir)): Promise<AgentImport | undefined> {
-  const rows = db(dataDir).backlogImport;
-  const rec = await rows.findUnique({ where: { run } });
+  const d = db(dataDir);
+  const rec = d.select().from(backlogImports).where(eq(backlogImports.run, run)).get();
   if (!rec || rec.projectId !== projectId) return undefined;
   if (rec.state === 'settled') return rec.result as AgentImport;
   const r = look(run);
   if (rec.state === 'applying' || (r && ['starting', 'running', 'waiting'].includes(r.status))) return { status: 'running' };
-  const { count } = await rows.updateMany({ where: { run, state: 'running' }, data: { state: 'applying' } });
-  if (!count) return { status: 'running' };
+  const { changes } = d.update(backlogImports).set({ state: 'applying' }).where(and(eq(backlogImports.run, run), eq(backlogImports.state, 'running'))).run();
+  if (!changes) return { status: 'running' };
   const text = rec.text ?? '';
   let result: Exclude<AgentImport, { status: 'running' }>;
   try {
@@ -142,6 +144,6 @@ export async function agentImport(dataDir: string, runsDir: string, projectId: s
     result = { status: 'failed', error: `saving the tasks failed: ${(e as Error).message}` };
   }
   // The text is only needed until now.
-  await rows.update({ where: { run }, data: { state: 'settled', result, text: null } });
+  d.update(backlogImports).set({ state: 'settled', result, text: null }).where(eq(backlogImports.run, run)).run();
   return result;
 }

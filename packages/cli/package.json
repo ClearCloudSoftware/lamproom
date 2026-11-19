@@ -3,22 +3,18 @@
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
-  "scripts": {
-    "postinstall": "prisma generate"
-  },
   "dependencies": {
     "@inquirer/prompts": "^8.7.3",
     "@lamproom/adapters": "workspace:*",
     "@lamproom/ask-user": "workspace:*",
     "@lamproom/core": "workspace:*",
-    "@prisma/adapter-better-sqlite3": "7.10.1",
-    "@prisma/client": "7.10.1",
     "better-sqlite3": "12.11.1",
-    "prisma": "7.10.1",
+    "drizzle-orm": "0.44.5",
     "yaml": "^2.9.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "7.6.13"
+    "@types/better-sqlite3": "7.6.13",
+    "drizzle-kit": "0.31.5"
   }
 }

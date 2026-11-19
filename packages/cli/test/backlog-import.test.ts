@@ -7,6 +7,7 @@ import { agentImport, agentTasks, importBacklog, type RunLook } from '../src/bac
 import type { StartInput } from '../src/flow-start.ts';
 import type { Project } from '../src/projects.ts';
 import { db } from '../src/db.ts';
+import { tasks } from '../src/schema.ts';
 import { readTasks } from '../src/tasks.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'lr-import-')));
@@ -94,7 +95,7 @@ test('import: a task past the backlog is skipped; another project’s same key i
   const data = temp();
   const p = project(temp());
   await importBacklog(data, '', p, { content: '## One\nfirst' }, refuses);
-  await db(data).task.updateMany({ data: { status: 'running' } });
+  db(data).update(tasks).set({ status: 'running' }).run();
   const again = await importBacklog(data, '', p, { content: '## One\nchanged' }, refuses);
   assert.ok(again.ok && 'imported' in again && again.imported.skipped === 1 && again.imported.updated === 0);
   assert.equal((await readTasks(data, p.id))[0].body, 'first');

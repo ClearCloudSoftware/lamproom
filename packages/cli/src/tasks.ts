@@ -3,10 +3,11 @@
  * (`keyTasks`); a re-import upserts on project + key, so importing the same backlog twice creates nothing new.
  */
 import type { ParsedTask } from '@lamproom/core';
+import { and, asc, eq, sql } from 'drizzle-orm';
 import { db } from './db.ts';
-import type { Task as Row } from './generated/prisma/client.ts';
+import { tasks } from './schema.ts';
 
-export type TaskStatus = 'backlog' | 'todo' | 'running' | 'blocked' | 'done' | 'failed' | 'cancelled';
+export type TaskStatus = (typeof tasks.$inferSelect)['status'];
 
 /** A task as the pages see it. `importKey`: null on a task made by hand, so no import ever matches it. */
 export interface Task {
@@ -25,20 +26,9 @@ export interface Task {
 /** `skipped`: in the file and already past the backlog, so left as it is. */
 export type UpsertCounts = { created: number; updated: number; skipped: number };
 
-const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
-const view = (r: Row): Task => ({
-  ...r,
-  acceptanceCriteria: strings(r.acceptanceCriteria),
-  nonGoals: strings(r.nonGoals),
-  status: r.status as TaskStatus,
-  createdAt: r.createdAt.toISOString(),
-  updatedAt: r.updatedAt.toISOString(),
-});
-
 /** The project's tasks, in the order they were made. */
 export async function readTasks(dataDir: string, projectId: string): Promise<Task[]> {
-  const rows = await db(dataDir).task.findMany({ where: { projectId }, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }] });
-  return rows.map(view);
+  return db(dataDir).select().from(tasks).where(eq(tasks.projectId, projectId)).orderBy(asc(tasks.createdAt), sql`rowid`).all();
 }
 
 /**
@@ -46,18 +36,18 @@ export async function readTasks(dataDir: string, projectId: string): Promise<Tas
  * still in the backlog takes the file's title, body, criteria and non-goals; one already promoted or run is skipped,
  * since runs read its text. Tasks no longer in the file stay as they are.
  */
-export function upsertTasks(dataDir: string, projectId: string, parsed: ParsedTask[]): Promise<UpsertCounts> {
-  return db(dataDir).$transaction(async (tx) => {
+export async function upsertTasks(dataDir: string, projectId: string, parsed: ParsedTask[]): Promise<UpsertCounts> {
+  return db(dataDir).transaction((tx) => {
     const counts: UpsertCounts = { created: 0, updated: 0, skipped: 0 };
     for (const p of parsed) {
       const fields = { title: p.title, body: p.body ?? null, acceptanceCriteria: p.acceptance_criteria ?? [], nonGoals: p.non_goals ?? [] };
-      const t = await tx.task.findUnique({ where: { projectId_importKey: { projectId, importKey: p.import_key } }, select: { id: true, status: true } });
+      const t = tx.select({ id: tasks.id, status: tasks.status }).from(tasks).where(and(eq(tasks.projectId, projectId), eq(tasks.importKey, p.import_key))).get();
       if (!t) {
-        await tx.task.create({ data: { projectId, importKey: p.import_key, status: 'backlog', ...fields } });
+        tx.insert(tasks).values({ projectId, importKey: p.import_key, ...fields }).run();
         counts.created++;
       } else if (t.status !== 'backlog') counts.skipped++;
       else {
-        await tx.task.update({ where: { id: t.id }, data: fields });
+        tx.update(tasks).set(fields).where(eq(tasks.id, t.id)).run();
         counts.updated++;
       }
     }
