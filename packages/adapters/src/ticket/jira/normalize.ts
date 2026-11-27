@@ -20,6 +20,7 @@ import {
   type ParsedTask,
   type SourceId,
   type SourceUsage,
+  type TaskType,
   deriveImportKey,
   slugify,
   type UpstreamKeyPolicy,
@@ -76,6 +77,8 @@ export interface RovoJiraSearchResult {
   next_page_token?: string;
 }
 
+const JIRA_TYPES: Record<string, TaskType> = { bug: 'bug', epic: 'epic', story: 'story' };
+
 export function normalizeJiraIssue(
   issue: RovoJiraIssue,
   sourceId: SourceId,
@@ -110,7 +113,17 @@ export function normalizeJiraIssue(
     labels,
     assignees,
     extras,
+    type: JIRA_TYPES[f.issuetype.name.toLowerCase()] ?? 'task',
   };
+  if (f.parent !== null) {
+    // Same derivation as the parent's own importKey, so storage finds it by exact match.
+    task.parentKey = deriveImportKey(
+      sourceId,
+      { upstream: f.parent.key, titleSlug: slugify(f.parent.key) },
+      POLICY_PREFIX,
+      new Set(),
+    );
+  }
   if (f.description !== null && f.description !== '') task.body = f.description;
   return task;
 }

@@ -13,8 +13,27 @@
           "url": "https://github.com/octokit/octokit.js/issues/42",
           "createdAt": "2026-10-01T12:34:56Z",
           "updatedAt": "2026-11-01T09:12:34Z",
-          "labels": { "nodes": [{ "name": "bug" }, { "name": "priority:high" }] },
-          "assignees": { "nodes": [{ "login": "alice" }] }
+          "labels": {
+            "nodes": [
+              {
+                "name": "bug"
+              },
+              {
+                "name": "priority:high"
+              }
+            ]
+          },
+          "assignees": {
+            "nodes": [
+              {
+                "login": "alice"
+              }
+            ]
+          },
+          "issueType": {
+            "name": "Bug"
+          },
+          "parent": null
         },
         {
           "number": 43,
@@ -23,8 +42,22 @@
           "url": "https://github.com/octokit/octokit.js/issues/43",
           "createdAt": "2026-10-15T08:00:00Z",
           "updatedAt": "2026-11-05T14:22:10Z",
-          "labels": { "nodes": [{ "name": "docs" }] },
-          "assignees": { "nodes": [] }
+          "labels": {
+            "nodes": [
+              {
+                "name": "docs"
+              }
+            ]
+          },
+          "assignees": {
+            "nodes": []
+          },
+          "issueType": {
+            "name": "Feature"
+          },
+          "parent": {
+            "number": 42
+          }
         },
         {
           "number": 44,
@@ -33,8 +66,19 @@
           "url": "https://github.com/octokit/octokit.js/issues/44",
           "createdAt": "2026-11-10T06:00:00Z",
           "updatedAt": "2026-11-10T06:00:00Z",
-          "labels": { "nodes": [] },
-          "assignees": { "nodes": [{ "login": "bob" }, { "login": "carol" }] }
+          "labels": {
+            "nodes": []
+          },
+          "assignees": {
+            "nodes": [
+              {
+                "login": "bob"
+              },
+              {
+                "login": "carol"
+              }
+            ]
+          }
         }
       ]
     }

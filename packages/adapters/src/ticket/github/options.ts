@@ -58,6 +58,8 @@ const ISSUES_QUERY = `query ($owner: String!, $repo: String!, $first: Int!, $aft
         updatedAt
         labels(first: 20) { nodes { name } }
         assignees(first: 10) { nodes { login } }
+        issueType { name }
+        parent { number }
       }
     }
   }

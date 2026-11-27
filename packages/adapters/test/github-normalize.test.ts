@@ -79,3 +79,29 @@ test('extractPageInfo returns undefined nextCursor when hasNextPage is false', a
   const info = extractPageInfo(payload);
   assert.equal(info.nextCursor, undefined);
 });
+
+test('maps issueType and parent into type and parentKey', async () => {
+  const [bug, feature] = (await loadFixture()).repository.issues.nodes;
+  const bugTask = normalizeIssueNode(bug!, 'github', new Set());
+  assert.equal(bugTask.type, 'bug');
+  assert.equal(bugTask.parentKey, undefined);
+  const child = normalizeIssueNode(feature!, 'github', new Set());
+  assert.equal(child.type, 'story');
+  assert.equal(child.parentKey, 'github-42');
+  assert.equal(child.parentKey, bugTask.importKey);
+});
+
+test('github type mapping: Task, Epic, labelled Feature, null', async () => {
+  const base = (await loadFixture()).repository.issues.nodes[0]!;
+  const typeOf = (issueType: { name: string } | null, labels: string[] = []) =>
+    normalizeIssueNode(
+      { ...base, issueType, labels: { nodes: labels.map((name) => ({ name })) } },
+      'github',
+      new Set(),
+    ).type;
+  assert.equal(typeOf({ name: 'Task' }), 'task');
+  assert.equal(typeOf({ name: 'Epic' }), 'epic');
+  assert.equal(typeOf({ name: 'Feature' }), 'story');
+  assert.equal(typeOf({ name: 'Feature' }, ['Epic']), 'epic');
+  assert.equal(typeOf(null), 'task');
+});

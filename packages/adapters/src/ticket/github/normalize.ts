@@ -19,6 +19,7 @@ import {
   type ParsedTask,
   type SourceId,
   type SourceUsage,
+  type TaskType,
   deriveImportKey,
   slugify,
   type UpstreamKeyPolicy,
@@ -43,6 +44,8 @@ export interface GithubIssueNode {
   updatedAt: string;
   labels: { nodes: GithubLabelNode[] };
   assignees: { nodes: GithubUserNode[] };
+  issueType?: { name: string } | null;
+  parent?: { number: number } | null;
 }
 
 export interface GithubIssuesPayload {
@@ -53,6 +56,19 @@ export interface GithubIssuesPayload {
     };
   };
   rateLimit: { remaining: number; resetAt: string };
+}
+
+function githubType(node: GithubIssueNode): TaskType {
+  switch (node.issueType?.name) {
+    case 'Bug':
+      return 'bug';
+    case 'Epic':
+      return 'epic';
+    case 'Feature':
+      return node.labels.nodes.some((l) => l.name.toLowerCase() === 'epic') ? 'epic' : 'story';
+    default:
+      return 'task';
+  }
 }
 
 export function normalizeIssueNode(node: GithubIssueNode, sourceId: SourceId, seen: Set<string>): ParsedTask {
@@ -73,7 +89,11 @@ export function normalizeIssueNode(node: GithubIssueNode, sourceId: SourceId, se
       createdAt: node.createdAt,
       updatedAt: node.updatedAt,
     },
+    type: githubType(node),
   };
+  if (node.parent) {
+    task.parentKey = deriveImportKey(sourceId, { upstream: String(node.parent.number), titleSlug: '' }, POLICY_NUMERIC, new Set());
+  }
   if (node.body !== null && node.body !== '') task.body = node.body;
   return task;
 }
