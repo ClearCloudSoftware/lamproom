@@ -10,6 +10,7 @@ import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
 import type { DoctorReport } from '../../packages/cli/src/doctor.ts';
 import type { SocketState } from '../../packages/cli/src/slack.ts';
 import type { Memory } from '../../packages/cli/src/memory.ts';
+import type { ProviderModel } from '../../packages/core/src/ports/agent-provider.ts';
 import { ApiError, call } from '../flows/api.ts';
 
 /**
@@ -130,6 +131,11 @@ export const cloneJobQuery = (id: string) =>
 
 /** Each agent CLI on this machine (`/api/agents`); slow-ish, as it runs each CLI. */
 export const agentsQuery = queryOptions({ queryKey: ['agents'], queryFn: () => call<Record<Harness, HarnessStatus>>('/api/agents') });
+
+/** What one agent CLI offers a model classes cell (`/api/agents/models`): `fetchedAt` null when it was never listed. Asked of the CLI again when over an hour old. */
+export interface AgentModelsView { fetchedAt: string | null; models: ProviderModel[]; error?: string }
+export const agentModelsQuery = (cli: Harness) => queryOptions({ queryKey: ['agent-models', cli], queryFn: () => call<AgentModelsView>(`/api/agents/models?cli=${cli}`) });
+export const refreshAgentModels = (cli: Harness) => call<AgentModelsView>(`/api/agents/models?cli=${cli}&refresh=1`);
 
 /** The doctor's report on this machine (`/api/doctor`): a couple of seconds and a few network calls, so it runs each time the page opens (showing the last report meanwhile) and on request, never on focus. */
 export const doctorQuery = queryOptions({ queryKey: ['doctor'], queryFn: () => call<DoctorReport>('/api/doctor'), staleTime: Infinity, refetchOnMount: 'always', refetchOnWindowFocus: false, retry: false });

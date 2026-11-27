@@ -11,7 +11,6 @@ import { useState } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { KeyTest } from '../../packages/cli/src/openrouter.ts';
 import { type ApprovedModel, type CatalogueModel, CONTEXT_FLOOR, FREE_WARNING, isLocal, type OllamaModel } from '../../packages/cli/src/settings.ts';
 import { modelsQuery, type ModelsView, refreshModels, removeOpenRouterKey, saveOpenRouterKey, testOpenRouterKey, updateAppSettings } from '../projects/api.ts';
@@ -380,55 +379,6 @@ export function OpencodeModelsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
-  );
-}
-
-// --- the model picker the settings pages share -----------------------------------------------------------------
-
-const NONE = '-'; // Radix keeps '' for "nothing picked"
-
-/**
- * OpenCode's model, picked from the approved models only, as the flow designer picks it. `none` names an empty
- * choice where the field may be empty; a saved value the list lacks stays shown, marked, until it is changed.
- */
-export function OpencodeModelSelect({ value, onChange, none, className }: { value: string; onChange: (v: string) => void; none?: string; className?: string }) {
-  const q = useQuery(modelsQuery);
-  const approved = q.data?.approved ?? [];
-  const picked = approved.find((m) => m.id === value);
-  const line = 'text-[11px] not-italic';
-  return (
-    <>
-      <Select value={value === '' ? (none ? NONE : '') : value} onValueChange={(v) => onChange(v === NONE ? '' : v)}>
-        {/* min-w-0 and truncate: a long model id stays in its column instead of running over the next field */}
-        <SelectTrigger className={`${className ?? ''} min-w-0`} aria-invalid={value !== '' && !picked ? true : undefined}>
-          <span className="min-w-0 truncate">
-            <SelectValue placeholder="pick an approved model" />
-          </span>
-        </SelectTrigger>
-        <SelectContent className="font-mono">
-          {none && <SelectItem value={NONE}>{none}</SelectItem>}
-          {value !== '' && !picked && <SelectItem value={value}>{value} (not approved)</SelectItem>}
-          {approved.map((m) => (
-            <SelectItem key={m.id} value={m.id}>
-              {m.id}
-              {m.local ? ' · local' : m.free ? ' · free' : ''}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {q.data && approved.length === 0 && (
-        <em className={`${line} text-wait`}>
-          No models approved yet:{' '}
-          <Link href="/settings/agents/models" className="underline">
-            approve some
-          </Link>
-        </em>
-      )}
-      {value !== '' && !picked && q.data && <em className={`${line} text-fail`}>not an approved model; pick one</em>}
-      {picked?.problem && <em className={`${line} text-fail`}>{picked.problem}</em>}
-      {picked?.free && !picked.local && <em className={`${line} text-wait`}>free: its provider may keep your prompts, which include the project&rsquo;s code</em>}
-      {picked?.local && picked.warning && <em className={`${line} text-wait`}>{picked.warning}</em>}
     </>
   );
 }

@@ -5,6 +5,7 @@
  * project.
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +30,9 @@ function Step({ id, view }: { id: InternalStep; view: AppView }) {
     mutationFn: () => updateAppSettings({ internal: { ...view.app.internal, [id]: cfg } }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] }),
   });
+  // What the class gives under the profile in use, as a run would resolve it (`modelRules().resolveClass`).
+  const profile = view.app.modelClasses.inUse;
+  const got = view.app.modelClasses.profiles[profile][f.class][f.adapter];
   const err = (k: string) => errors[k] && <em className="text-[11px] text-fail not-italic">{errors[k]}</em>;
   return (
     <section aria-label={s.name} className="grid border border-border bg-card">
@@ -78,6 +82,25 @@ function Step({ id, view }: { id: InternalStep; view: AppView }) {
             {err('budgetUsd')}
           </label>
         </div>
+        <p className="m-0 font-mono text-xs">
+          {got ? (
+            <>
+              {f.class} → {got.model}
+              {got.effort && ` · ${got.effort}`}
+            </>
+          ) : (
+            <span className="text-fail">
+              no {f.adapter} model for {f.class} in {profile}
+            </span>
+          )}
+          <span className="font-sans text-muted-foreground">
+            {got ? ` under ${profile}, the profile in use; ` : '; '}
+            set in{' '}
+            <Link href="/settings/agents/classes" className="underline">
+              Model classes
+            </Link>
+          </span>
+        </p>
         <ErrorLine error={save.error} />
         <div>
           <Button size="sm" disabled={!dirty || Object.keys(errors).length > 0 || save.isPending} onClick={() => save.mutate()}>
