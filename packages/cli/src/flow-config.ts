@@ -15,13 +15,17 @@ import type { ModelRules, RunConfig } from './config.ts';
 import { PROJECT_FILE, projectSettings } from './project.ts';
 import type { Limits } from './project.ts';
 import type { Isolation } from './isolation.ts';
-import { CLASSES, isLocal } from './settings.ts';
+import { CLASSES, cellProblem, isLocal } from './settings.ts';
+import type { ModelClass, Profile } from './settings.ts';
 
 export const OUTCOME_CLOSING =
   'Before you stop, report your verdict with the set_outcome tool: "pass" if the work meets the task, "fail" if it does not, with a one-line reason.';
 
-/** `verdict`: its routes or its approval gate use the outcome, so it is offered set_outcome. */
-export interface AiStep { kind: 'ai'; run: RunConfig; timeoutMinutes?: number; verdict: boolean }
+/**
+ * `verdict`: its routes or its approval gate use the outcome, so it is offered set_outcome. `resolved`: the class it asked
+ * for and the profile that picked its model, as the run started; absent for a step that named its model.
+ */
+export interface AiStep { kind: 'ai'; run: RunConfig; timeoutMinutes?: number; verdict: boolean; resolved?: { class: ModelClass; profile: Profile } }
 /** `fromProject`: the step's `shell:` is empty, so it runs the project's `check_command` (`.lamproom.yaml`). */
 export interface ShellStep { kind: 'shell'; command: string; timeoutMinutes: number; fromProject?: true }
 /**
@@ -50,10 +54,11 @@ const SHELL_TIMEOUT_MINUTES = 30;
 /** Step names and artifact types become file names; lowercase only, since macOS treats Plan.md and plan.md as one file. */
 const NAME = /^[a-z0-9][a-z0-9_-]*$/;
 const BAD_NAME = 'name may only use lowercase letters, digits, - and _';
+const BOTH = 'set class or model, not both';
+const both = (l?: { model?: string; class?: string }) => l?.model !== undefined && l.class !== undefined;
 const PSEUDO_STEP = 'no START or END here; a flow starts at the step no edge points to (or the one entry: names) and ends when nothing is left to run';
 
-/** lr-run-agent's keys, minus `folder`: every one optional, so `defaults` can fill it. */
-// `class` is read but not resolved yet (Task 5 of the model-classes plan): it is stripped before the launch config is built.
+/** lr-run-agent's keys, minus `folder`: every one optional, so `defaults` can fill it; plus `class`, resolved to a model here. */
 const Launch = RunSchema.omit({ folder: true }).partial().extend({ class: z.enum(CLASSES).optional() });
 const LAUNCH_KEYS = new Set(Object.keys(Launch.shape));
 const StepSchema = Launch.extend({
@@ -192,6 +197,7 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
   if (run && filesOk && PLACEHOLDER.test(readFileSync(taskAbs, 'utf8'))) warnings.push('--task: {{…}} is not filled in; the agent reads it as written');
 
   const steps: Record<string, AiStep | ShellStep> = {};
+  if (both(y.defaults)) err(7, `defaults: ${BOTH}`);
   for (const [name, st] of Object.entries(y.steps)) {
     const at = `steps.${name}`;
     const launch = Object.fromEntries(Object.entries(st).filter(([k]) => LAUNCH_KEYS.has(k)));
@@ -216,6 +222,9 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
     }
 
     const merged: z.infer<typeof Launch> = { ...y.defaults, ...launch }; // a step's key replaces the default whole
+    // A step's own model or class beats either in defaults: the two never mix across levels.
+    const level = st.model !== undefined || st.class !== undefined ? st : (y.defaults ?? {});
+    if (both(st)) err(7, `${at}: ${BOTH}`);
     let template: string | undefined;
     if (merged.prompt !== undefined) {
       const path = toAbs(merged.prompt, recipeDir);
@@ -241,11 +250,35 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
     if (budgetUsd === 0 && merged.limits?.max_turns === undefined && merged.limits?.budget_usd === undefined) {
       warnings.push(`${at}: no limits.max_turns or limits.budget_usd, and the flow has no budget; nothing stops a looping agent`);
     }
-    if (!filesOk) continue; // every step would repeat the folder or task error
+    if (!filesOk || both(level)) continue; // every step would repeat the folder or task error; both is said above
 
+    // A class (standard when neither is named) becomes the model and effort the profile in use gives; without the
+    // rules, as in tests, a step still needs its model. Any effort set beats the cell's.
+    const { class: asked, ...launchKeys } = merged;
+    launchKeys.model = level.model;
+    let resolved: AiStep['resolved'];
+    if (level.model === undefined && merged.adapter && models?.resolveClass) {
+      const cls = asked ?? 'standard';
+      const cell = models.resolveClass(cls, merged.adapter);
+      if ('error' in cell) {
+        err(7, `${at}.class: ${cell.error}`);
+        continue;
+      }
+      launchKeys.model = cell.model;
+      launchKeys.effort ??= cell.effort;
+      resolved = { class: cls, profile: cell.profile };
+    } else if (level.model !== undefined && models?.resolveClass) warnings.push(`${at}.model: names a model directly; class: lets the profile in use pick it`);
+    // An effort the model does not take is refused, a named model's too, wherever its CLI's list knows the model.
+    const { adapter, model, effort } = launchKeys;
+    if (adapter && model && effort) {
+      const levels = models?.efforts?.(adapter, model);
+      const problem = levels && cellProblem(adapter, { model, effort }, [{ id: model, name: model, efforts: levels }]);
+      if (problem) {
+        err(7, `${at}.effort: ${problem}`);
+        continue;
+      }
+    }
     // The task file is every step's preamble; the step's own prompt is its template.
-    const launchKeys = { ...merged };
-    delete launchKeys.class;
     const r = configFromObject({ ...launchKeys, folder, prompt: taskAbs }, recipeDir, models);
     if (!r.ok) {
       r.errors.forEach((l) => err(7, `${at}.${l}`));
@@ -264,6 +297,7 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
       kind: 'ai',
       run: { yamlPath: read.abs, ...r.config },
       verdict,
+      ...(resolved && { resolved }),
       ...(st.timeout_minutes !== undefined && { timeoutMinutes: st.timeout_minutes }),
     };
   }

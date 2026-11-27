@@ -20,6 +20,8 @@ import { KNOWLEDGE_TASK, knowledgeFlowText } from '../src/knowledge-run.ts';
 import { addMemories, memoryFile, readMemories, RECALL_HEAD } from '../src/memory.ts';
 import { renderPrompt } from '@lamproom/core';
 import type { RunDeps } from '../src/run.ts';
+import { updateAppSettings } from '../src/app-settings.ts';
+import { APP_DEFAULTS } from '../src/settings.ts';
 import { DELIVERY, flowProject, registerProject, RUN } from './fixtures/flow.ts';
 
 const USAGE = [
@@ -633,6 +635,20 @@ test('Ctrl+C stops the flow, and --resume reruns the step it cut off', { timeout
   assert.ok(s.out.includes('-- flow stopped: 1 run, $0.00 spent, $0.00 wasted, cost unknown for 1 run'), s.out.join('\n'));
   assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
   assert.deepEqual(s.state().runs.map((r) => [r.step, r.attempt]), [['build', 1], ['build', 1]]);
+});
+
+test('a resumed run keeps the class, profile and model it started with, whatever the profile in use is now', { timeout: 10_000 }, async () => {
+  const s = setup('budget_usd: 0\ndefaults: { adapter: claude-code, class: standard, limits: { max_turns: 5 } }\nsteps:\n  build: { prompt: prompts/build.md }\n', { build: ['hang', 'pass'] });
+  when(() => s.script.timeline.includes('start:build'), () => s.signals.emit('SIGINT'));
+  assert.equal(await runFlow([...RUN, 'flow.yaml'], s.deps), 130);
+  const line = '-- build attempt 1 (claude-code sonnet (standard in balanced))';
+  assert.ok(s.out.includes(line), s.out.join('\n'));
+  // quality's standard is opus: a resume must not pick it up
+  assert.ok(updateAppSettings(join(s.base, 'data'), { modelClasses: { ...APP_DEFAULTS.modelClasses, inUse: 'quality' } }).ok);
+  s.out.length = 0;
+  assert.equal(await runFlow(['--resume', RUN_DIR], s.deps), 0, s.out.join('\n'));
+  assert.ok(s.out.includes(line), s.out.join('\n'));
+  assert.deepEqual(s.script.specs.map((x) => [x.model, x.effort]), [['sonnet', 'high'], ['sonnet', 'high']]);
 });
 
 test('a run reads as launched in state.json while it runs', { timeout: 10_000 }, async () => {

@@ -1,12 +1,12 @@
 # Plan, then implement and write tests side by side; a check gates the review, and failures go back to implement.
 budget_usd: 5                      # required: the most the whole flow may spend, in dollars; 0 for no ceiling
-defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 30 } }
+defaults: { adapter: claude-code, class: standard, limits: { max_turns: 30 } }   # the profile in use picks the model
 steps:
   plan: { prompt: prompts/plan.md, produces: [plan], gate: approval }   # prompts/ sits beside this file
   implement: { prompt: prompts/implement.md, requires: [plan], produces: [notes], max_attempts: 2 }
   tests:
     adapter: opencode              # a second provider in the same flow
-    model: openrouter/deepseek/deepseek-v4.1-flash
+    model: openrouter/deepseek/deepseek-v4.1-flash   # named directly: no OpenCode model is set for a class by default
     prompt: prompts/tests.md
     requires: [plan]
     produces: [test_notes]

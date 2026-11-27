@@ -276,6 +276,7 @@ function Log({ run, logs, shown, setTab, questions, live }: { run: RunDetail; lo
       {step && (
         <div className="rv-chips">
           <span className="chip">{step.kind === 'shell' ? `shell · ${step.command}` : [step.adapter, step.model, step.effort].filter(Boolean).join(' · ')}</span>
+          {step.class && <span className="chip">{step.class} in {step.profile}</span>}
           {record && <span className="chip">attempt {record.attempt} of {step.maxAttempts}</span>}
           {record?.outcome && <span className={`chip ${record.outcome === 'fail' ? 'bad' : 'out'}`}>{record.outcome}</span>}
           {record?.wasted && <span className="chip bad">wasted</span>}

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { join } from 'node:path';
 import type { FlowDef } from '@lamproom/core';
 import { CLOSING } from '../src/config.ts';
+import type { ModelRules } from '../src/config.ts';
 import { loadFlow, OUTCOME_CLOSING, toMermaid } from '../src/flow-config.ts';
 import { DELIVERY, flowProject, RUN_IN } from './fixtures/flow.ts';
 
@@ -241,4 +242,48 @@ test("an empty shell: runs the project's check_command, and a run in a folder wi
   const r = loadFlow('flow.yaml', flowProject(empty, { 'proj/.lamproom.yaml': 'check_command: node --test\n' }), RUN_IN);
   assert.ok(r.ok, JSON.stringify(r));
   assert.deepEqual(r.config.steps.check, { kind: 'shell', command: 'node --test', timeoutMinutes: 30, fromProject: true });
+});
+
+// --- classes: the profile in use picks a step's model (docs/Lamproom/Agent Providers/Model Catalogue.md, Resolution)
+
+/** balanced: standard → claude-code sonnet · high; deep → no opencode model. Sonnet takes low and high. */
+const RULES: ModelRules = {
+  problem: () => undefined,
+  warning: () => undefined,
+  resolveClass: (cls, cli) => (cls === 'standard' && cli === 'claude-code' ? { model: 'sonnet', effort: 'high', profile: 'balanced' } : { error: `no ${cli} model for ${cls} in balanced` }),
+  efforts: (cli, model) => (cli === 'claude-code' && model === 'sonnet' ? ['low', 'high'] : undefined),
+};
+const classFlow = (step: string, defaults = 'adapter: claude-code') => `budget_usd: 1\ndefaults: { ${defaults} }\nsteps:\n  x: { prompt: prompts/x.md${step} }\n`;
+const loadClass = (yaml: string, rules?: ModelRules) => loadFlow('flow.yaml', flowProject(yaml), RUN_IN, undefined, rules);
+
+test('a step with no model asks for standard, and the profile in use picks its model and effort', () => {
+  const r = loadClass(classFlow(''), RULES);
+  assert.ok(r.ok, JSON.stringify(r));
+  const x = r.config.steps.x.kind === 'ai' ? r.config.steps.x : assert.fail();
+  assert.deepEqual([x.run.spec.model, x.run.spec.effort, x.resolved, r.config.warnings], ['sonnet', 'high', { class: 'standard', profile: 'balanced' }, []]);
+  // a step's own effort beats the cell's
+  const low = loadClass(classFlow(', effort: low'), RULES);
+  assert.ok(low.ok && low.config.steps.x.kind === 'ai' && low.config.steps.x.run.spec.effort === 'low', JSON.stringify(low));
+});
+
+test('a class is refused before launch when its cell is empty, or its effort is one the model does not take', () => {
+  assert.deepEqual(loadClass(classFlow(', adapter: opencode, class: deep'), RULES), { ok: false, errors: ['flow.yaml: steps.x.class: no opencode model for deep in balanced'] });
+  assert.deepEqual(loadClass(classFlow(', effort: max'), RULES), { ok: false, errors: ['flow.yaml: steps.x.effort: sonnet has no max effort; it takes low, high'] });
+  // a model named directly is checked the same way
+  assert.deepEqual(loadClass(classFlow(', model: sonnet, effort: max'), RULES), { ok: false, errors: ['flow.yaml: steps.x.effort: sonnet has no max effort; it takes low, high'] });
+});
+
+test('class and model on one level is an error; a step names a model directly with a warning', () => {
+  assert.deepEqual(loadClass(classFlow(', class: fast, model: sonnet'), RULES), { ok: false, errors: ['flow.yaml: steps.x: set class or model, not both'] });
+  assert.deepEqual(loadClass(classFlow('', 'adapter: claude-code, class: fast, model: sonnet'), RULES), { ok: false, errors: ['flow.yaml: defaults: set class or model, not both'] });
+  // the step's own model beats the class in defaults
+  const r = loadClass(classFlow(', model: opus', 'adapter: claude-code, class: standard'), RULES);
+  assert.ok(r.ok, JSON.stringify(r));
+  const x = r.config.steps.x.kind === 'ai' ? r.config.steps.x : assert.fail();
+  assert.deepEqual([x.run.spec.model, x.run.spec.effort, x.resolved], ['opus', undefined, undefined]);
+  assert.deepEqual(r.config.warnings, ['steps.x.model: names a model directly; class: lets the profile in use pick it']);
+});
+
+test('without the model rules, a step with no model keeps today\'s error', () => {
+  assert.deepEqual(loadClass(classFlow('')), { ok: false, errors: ['flow.yaml: steps.x.model: required'] });
 });

@@ -41,7 +41,7 @@ test('a run as the page shows it: steps with their state, spend and waste, artif
   const config = {
     name: 'delivery', folder: '/w', budgetUsd: 5, warnings: [],
     flow: { steps: [{ id: 'plan', requires: [], produces: ['plan'], approval: false, maxAttempts: 3 }, { id: 'tests', requires: ['plan'], produces: [], approval: true, maxAttempts: 3 }], edges: [] },
-    steps: { plan: { kind: 'ai', verdict: false, run: { adapter: 'claude-code', spec: { model: 'opus', effort: 'high' } } }, tests: { kind: 'shell', command: 'pnpm test', timeoutMinutes: 30 } },
+    steps: { plan: { kind: 'ai', verdict: false, run: { adapter: 'claude-code', spec: { model: 'opus', effort: 'high' } }, resolved: { class: 'deep', profile: 'balanced' } }, tests: { kind: 'shell', command: 'pnpm test', timeoutMinutes: 30 } },
   };
   writeFileSync(join(dir, 'flow.json'), JSON.stringify({ version: 1, config, artifactsDir: arts }));
   writeFileSync(join(dir, 'state.json'), JSON.stringify({
@@ -59,6 +59,8 @@ test('a run as the page shows it: steps with their state, spend and waste, artif
   assert.equal(r.page, true);
   assert.deepEqual(r.steps.map((s) => [s.name, s.kind, s.model ?? s.command, s.state, s.attempts]), [['plan', 'ai', 'opus', 'done', 2], ['tests', 'shell', 'pnpm test', 'awaiting_approval', 1]]);
   assert.equal(r.steps[1].gate?.reason, 'approval needed');
+  // what the run pinned as it started, whatever the profile table says now
+  assert.deepEqual([r.steps[0].class, r.steps[0].profile, r.steps[0].effort], ['deep', 'balanced', 'high']);
   assert.equal(r.spentUsd.toFixed(2), '0.40');
   assert.equal(r.wastedUsd, 0.3);
   assert.deepEqual([r.runs[0].startedAt, r.runs[0].endedAt], ['2026-10-27T10:00:01.000Z', '2026-10-27T10:00:09.000Z']);
