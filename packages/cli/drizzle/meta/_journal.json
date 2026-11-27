@@ -15,6 +15,13 @@
       "when": 1795781623632,
       "tag": "0001_import-note",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795784358373,
+      "tag": "0002_task-types",
+      "breakpoints": true
     }
   ]
 }

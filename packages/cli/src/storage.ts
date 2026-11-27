@@ -15,7 +15,8 @@
 
 import { randomUUID } from 'node:crypto';
 import { and, desc, eq, sql } from 'drizzle-orm';
-import type { ParsedTask } from '@lamproom/core';
+import { canMove, columnOf } from '@lamproom/core';
+import type { ParsedTask, StatusId } from '@lamproom/core';
 import type { LamproomDb } from './db.ts';
 import {
   importsTable,
@@ -55,6 +56,9 @@ export function upsertTask(
         acceptance: task.acceptanceCriteria ?? [],
         nonGoals: task.nonGoals ?? [],
         hint: task._hint,
+        type: task.type ?? 'task',
+        parentKey: task.parentKey ?? null,
+        status: task.extras?.statusCategory === 'done' ? 'done' : 'backlog',
         importedAt: nowIso,
         updatedAt: nowIso,
       })
@@ -71,6 +75,8 @@ export function upsertTask(
       acceptance: task.acceptanceCriteria ?? [],
       nonGoals: task.nonGoals ?? [],
       hint: task._hint,
+      type: task.type ?? 'task',
+      parentKey: task.parentKey ?? null,
       updatedAt: nowIso,
     })
     .where(
@@ -142,6 +148,57 @@ export function getTask(
       ),
     )
     .get();
+}
+
+function childrenOf(db: LamproomDb, projectId: string, sourceId: string, key: string): TaskRow[] {
+  return db
+    .select()
+    .from(tasksTable)
+    .where(
+      and(
+        eq(tasksTable.projectId, projectId),
+        eq(tasksTable.sourceId, sourceId),
+        eq(tasksTable.parentKey, key),
+      ),
+    )
+    .all();
+}
+
+/** Where a card sits: a container follows its children's columns (an epic goes two levels down). */
+function columnFor(db: LamproomDb, t: TaskRow): StatusId {
+  const kids = childrenOf(db, t.projectId, t.sourceId, t.importKey);
+  const childColumns = kids.map((k) => (t.type === 'epic' ? columnFor(db, k) : k.status));
+  return columnOf(t.type, t.status, childColumns);
+}
+
+export type MoveResult =
+  | { ok: true; task: TaskRow }
+  | { ok: false; code: 404 | 409; error: string };
+
+/** Move a card to a board status, if the rules allow it. */
+export function moveTask(
+  db: LamproomDb,
+  projectId: string,
+  sourceId: string,
+  importKey: string,
+  to: StatusId,
+): MoveResult {
+  const t = getTask(db, projectId, sourceId, importKey);
+  if (t === undefined) return { ok: false, code: 404, error: `task not found: ${importKey}` };
+  const why = canMove(t.type, columnFor(db, t), to);
+  if (why === 'same') return { ok: true, task: t };
+  if (why !== '') return { ok: false, code: 409, error: why };
+  db.update(tasksTable)
+    .set({ status: to, updatedAt: new Date().toISOString() })
+    .where(
+      and(
+        eq(tasksTable.projectId, projectId),
+        eq(tasksTable.sourceId, sourceId),
+        eq(tasksTable.importKey, importKey),
+      ),
+    )
+    .run();
+  return { ok: true, task: getTask(db, projectId, sourceId, importKey)! };
 }
 
 export function deleteTasks(db: LamproomDb, projectId: string, sourceId: string): number {

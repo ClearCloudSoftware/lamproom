@@ -29,6 +29,7 @@
  *     docs/superpowers/specs/2026-11-14-task-source-port-design.md.
  */
 
+import type { TaskType } from '../board.ts';
 import type { SourceUsage } from './ticket.ts';
 
 // ---------------------------------------------------------------------------
@@ -133,6 +134,10 @@ export interface ParsedTask {
   labels?: string[];
   assignees?: string[];
   extras?: Record<string, unknown>;
+  /** What kind of card this is; the store uses `task` when the source doesn't say. */
+  type?: TaskType;
+  /** The parent's `importKey` in the same source. */
+  parentKey?: string;
   _hint: ImportKeyHint;
 }
 
