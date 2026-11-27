@@ -123,7 +123,7 @@ The exact `bd` commands are illustrative, as in the board mockup.
 
 - **Four types.** A spike is a task whose flow ends in a report, and a chore is a task. Types are rows, so a project can add one later.
 - **Who sets the type:** you, when you create a card. Otherwise the importer, or the triage agent while it reads `needs-triage`, decides it along with where the card goes.
-- **Every type shares the project's statuses.** Bug and task differ only in the flow they run. A story also gets `in tasks` and the land step, because it's a container. An epic uses `backlog`, `in tasks`, `done` and `wontfix` only, because it never runs: `needs-context`, `ready-for-agent` and `in progress` are limited to the other three types. Those are rules in code, not something you configure.
+- **Every type shares the project's statuses.** Bug and task differ only in the flow they run. A story also gets `in tasks` and the land step, because it's a container. An epic never runs, so `needs-context`, `ready-for-agent` and `in progress` are limited to the other three types. It can still go to `ready-for-human` (decided 2026-11-27), as well as `backlog`, `in tasks`, `done` and `wontfix`. Those are rules in code, not something you configure.
 - **The project's `default_flow_id`** stays as the fallback for a type without its own flow.
 
 ## Should Lamproom have a story type?
