@@ -87,3 +87,27 @@ test('a cyclic or upside-down parent is ignored', () => {
   const ix3 = indexTasks([t('e', 'epic', 'backlog', 's'), t('s', 'story', 'backlog', 'e')]);
   assert.deepEqual([...ix3.kids.keys()], ['md:e']); // the story links up; the epic's own parent is ignored
 });
+test('the story filter keeps split stories: they show as cards inside their epic group', () => {
+  const g = groupColumn('in tasks', ix, { type: 'story', epic: '' }, new Set());
+  assert.deepEqual(g.epics.map((e) => e.head.importKey), ['e1', 'e2']);
+  assert.deepEqual(g.epics.map((e) => e.cards.map((c) => c.importKey)), [['s1'], ['s3']]);
+  assert.deepEqual(g.loose, []);
+});
+test('the epic filter shows an epic with no visible content as a loose card', () => {
+  const g = groupColumn('in tasks', ix, { type: 'epic', epic: '' }, new Set());
+  assert.deepEqual(g.epics, []);
+  assert.deepEqual(g.loose.map((c) => c.importKey), ['e1', 'e2']);
+});
+test('in tasks with every type: an epic group per epic holding its story as a card; count is 4', () => {
+  const g = groupColumn('in tasks', ix, { type: 'all', epic: '' }, new Set());
+  assert.deepEqual(g.epics.map((e) => e.cards.map((c) => c.importKey)), [['s1'], ['s3']]);
+  assert.equal(g.count, 4);
+});
+test('a picked epic counts only the tasks inside it, not the epic', () => {
+  assert.equal(groupColumn('in tasks', ix, { type: 'all', epic: 'md:e1' }, new Set()).count, 1);
+});
+test('a picked id that exists but is not an epic falls back to all epics, and groupColumn does not throw', () => {
+  assert.equal(effectiveFilters({ type: 'all', epic: 'md:x' }, ix).epic, '');
+  assert.equal(groupColumn('backlog', ix, { type: 'all', epic: 'md:gone' }, new Set()).count, 4);
+  assert.equal(groupColumn('backlog', ix, { type: 'all', epic: 'md:s1' }, new Set()).epics.length, 2);
+});

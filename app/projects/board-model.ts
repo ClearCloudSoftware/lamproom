@@ -22,7 +22,10 @@ export function indexTasks(tasks: TaskRow[]): BoardIndex {
   const kids = new Map<string, TaskRow[]>();
   for (const t of tasks) {
     const p = parentOf(t, byId);
-    if (p !== undefined) kids.set(taskId(p), [...(kids.get(taskId(p)) ?? []), t]);
+    if (p === undefined) continue;
+    const list = kids.get(taskId(p));
+    if (list === undefined) kids.set(taskId(p), [t]);
+    else list.push(t);
   }
   // Same rule as the server's `columnFor`: tasks and bugs first, then stories, then epics.
   const column = new Map<string, StatusId>();
@@ -52,8 +55,9 @@ export interface Filters {
   epic: string; // an epic's taskId; '' means all epics
 }
 
+/** A picked epic that is gone, or no longer an epic after a re-import, means all epics. */
 export const effectiveFilters = (f: Filters, ix: BoardIndex): Filters =>
-  f.epic !== '' && !ix.byId.has(f.epic) ? { ...f, epic: '' } : f;
+  f.epic !== '' && ix.byId.get(f.epic)?.type !== 'epic' ? { ...f, epic: '' } : f;
 
 export interface Group {
   head: TaskRow;
@@ -71,34 +75,37 @@ export interface ColumnGroups {
   count: number;
 }
 
-/** `expanded` holds `${column}:${taskId}` keys; every other group is folded. */
+/**
+ * `expanded` holds `${column}:${taskId}` keys; every other group is folded.
+ * Cards are filtered by type first, then grouped. A group shows only when it has visible
+ * content here (a passing card, or for an epic a visible story group); a container in this
+ * column with no visible content is a plain card in its epic's group, or loose.
+ */
 export function groupColumn(
   column: StatusId,
   ix: BoardIndex,
-  f: Filters,
+  filters: Filters,
   expanded: ReadonlySet<string>,
 ): ColumnGroups {
+  const f = effectiveFilters(filters, ix);
   const kidsOf = (t: TaskRow) => (ix.kids.get(taskId(t)) ?? []).toSorted(byKey);
-  const hasKids = (t: TaskRow) => isContainer(t.type) && kidsOf(t).length > 0;
-  const inColumn = (t: TaskRow) => ix.column.get(taskId(t)) === column;
-  const shown = (t: TaskRow) => inColumn(t) && (f.type === 'all' || t.type === f.type);
-  let count = 0;
+  const hasKids = (t: TaskRow) => (ix.kids.get(taskId(t))?.length ?? 0) > 0;
+  const shown = (t: TaskRow) =>
+    ix.column.get(taskId(t)) === column && (f.type === 'all' || t.type === f.type);
 
-  // A group shows when a card of its own passes, or (with no type filter) when its head sits in this column.
+  // Sorts `k` into a group (when it has visible content) or a plain card.
+  const place = (k: TaskRow, groups: Group[], cards: TaskRow[]) => {
+    const g = hasKids(k) ? build(k) : undefined;
+    if (g !== undefined) groups.push(g);
+    else if (shown(k)) cards.push(k);
+  };
+
   const build = (head: TaskRow): Group | undefined => {
     const kids = kidsOf(head);
     const stories: Group[] = [];
     const cards: TaskRow[] = [];
-    for (const k of kids) {
-      if (hasKids(k)) {
-        const g = build(k);
-        if (g !== undefined) stories.push(g);
-      } else if (shown(k)) {
-        cards.push(k);
-        count++;
-      }
-    }
-    if (stories.length === 0 && cards.length === 0 && !(f.type === 'all' && inColumn(head))) return undefined;
+    for (const k of kids) place(k, stories, cards);
+    if (stories.length === 0 && cards.length === 0) return undefined;
     const counted = head.type === 'epic' ? kids.filter((k) => k.type === 'story') : kids;
     return {
       head,
@@ -115,15 +122,8 @@ export function groupColumn(
     f.epic === ''
       ? [...ix.byId.values()].filter((t) => parentOf(t, ix.byId) === undefined)
       : kidsOf(ix.byId.get(f.epic)!);
-  for (const t of tops.toSorted(byKey)) {
-    if (hasKids(t)) {
-      const g = build(t);
-      if (g !== undefined) (t.type === 'epic' ? out.epics : out.stories).push(g);
-    } else if (shown(t)) {
-      out.loose.push(t);
-      count++;
-    }
-  }
-  out.count = count;
+  for (const t of tops.toSorted(byKey)) place(t, t.type === 'epic' ? out.epics : out.stories, out.loose);
+  // Every task here that passes the filters, whether it shows as a card or as a group head.
+  out.count = [...ix.byId.values()].filter((t) => shown(t) && (f.epic === '' || epicOf(t, ix) === f.epic)).length;
   return out;
 }
