@@ -91,7 +91,7 @@ test('maps issueType and parent into type and parentKey', async () => {
   assert.equal(child.parentKey, bugTask.importKey);
 });
 
-test('github type mapping: Task, Epic, labelled Feature, null', async () => {
+test('github type mapping: Task, Epic, Story, labelled Feature, null', async () => {
   const base = (await loadFixture()).repository.issues.nodes[0]!;
   const typeOf = (issueType: { name: string } | null, labels: string[] = []) =>
     normalizeIssueNode(
@@ -101,6 +101,7 @@ test('github type mapping: Task, Epic, labelled Feature, null', async () => {
     ).type;
   assert.equal(typeOf({ name: 'Task' }), 'task');
   assert.equal(typeOf({ name: 'Epic' }), 'epic');
+  assert.equal(typeOf({ name: 'Story' }), 'story');
   assert.equal(typeOf({ name: 'Feature' }), 'story');
   assert.equal(typeOf({ name: 'Feature' }, ['Epic']), 'epic');
   assert.equal(typeOf(null), 'task');

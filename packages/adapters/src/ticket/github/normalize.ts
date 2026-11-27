@@ -64,6 +64,8 @@ function githubType(node: GithubIssueNode): TaskType {
       return 'bug';
     case 'Epic':
       return 'epic';
+    case 'Story':
+      return 'story';
     case 'Feature':
       return node.labels.nodes.some((l) => l.name.toLowerCase() === 'epic') ? 'epic' : 'story';
     default:

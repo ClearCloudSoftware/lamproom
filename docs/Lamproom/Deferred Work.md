@@ -386,6 +386,7 @@ What `feature/board-task-types` (2026-11-27) left unfixed. It built task types, 
 | The filter state keeps a vanished epic's id | The epic filter applies again if that epic comes back | `Filters` in `app/projects/board-model.ts` and the board's `useState` |
 | The disabled *Move to* buttons' tooltip wrapper puts `aria-label` on a span with no role | A screen reader may ignore the reason | `app/projects/task-sheet.tsx` |
 | The board container's `max-w-7xl` clips columns on a wide board | With all ten columns shown, the last one is cut off until you scroll sideways | `app/projects/tasks-board.tsx` |
+| The board loads at most 500 tasks, newest `updatedAt` first | With grouping, a parent or child past the cut shows as a loose card, and the board's column for a container can differ from the server's. A move bumps `updatedAt`, which changes which rows load. The server stays authoritative: a wrong move gets a 409 with the reason | `projectTasksQuery` in `app/projects/api.ts` (`limit=500`) and the list route's cap |
 
 ## Desktop app on Windows
 

@@ -7,7 +7,7 @@ module: Board
 
 The project board now knows task types, epics and stories. Cards sit in columns by their Lamproom status, are grouped epic, then story, then task, and move between your statuses from the card's sheet. Before this branch the board's columns came from each provider's status category, and a task had no type or parent.
 
-This note is the state of branch `feature/board-task-types` on 2026-11-27: cut from `dev` at `b728382`, commits `20aade2..9e5d13e`, not merged or pushed. The plan is `docs/superpowers/plans/2026-11-27-board-task-types.md`. The design is [[Task Types And Statuses]]. It records:
+This note is the state of branch `feature/board-task-types` on 2026-11-27: cut from `dev` at `b728382`, the commits after `b728382` on `feature/board-task-types`, not merged or pushed. The plan is `docs/superpowers/plans/2026-11-27-board-task-types.md`. The design is [[Task Types And Statuses]]. It records:
 
 - [[#What is built]].
 - [[#Decisions open to your review]].
@@ -38,8 +38,9 @@ These shape what the board does. Each is easy to change.
 |---|---|---|---|
 | 1 | Lamproom owns `status` once a task exists. An import sets it only on the first import: `backlog`, or `done` when the source says done | A re-import must not undo a move you made. The provider's status isn't written back yet, so it has nothing better to say | Importing a status on every run would reset your moves. Syncing both ways needs the write-back plan |
 | 2 | An epic's or story's column is computed from its children, not stored. Until `story-land` exists, a story is done when its last task is | Stored, it would drift from its children. `story-land` is what will make a story's own finish a separate step | `columnOf` in `board.ts` |
-| 3 | On GitHub, a Feature is a story, and a Feature with an `epic` label is an epic. An Epic issue type is an epic | GitHub has no story type, and the note proposed this mapping | One `switch` in `github/normalize.ts` |
+| 3 | On GitHub the issue type maps like this: Bug to bug, Task to task, Epic to epic, Story to story (an org's custom type), Feature to story, and Feature with an `epic` label to epic. Anything else is a task | GitHub has no built-in story type, so Feature stands in for it unless the org made a Story type. The note proposed this mapping | One `switch` in `github/normalize.ts` |
 | 4 | A parent link that doesn't fit the type levels is ignored on the board but kept in the database | A bad link in the source shouldn't hide a card or break the board, and keeping it means fixing the source fixes the board | The rule is in the next section |
+| 5 | **Open question:** which statuses may an epic use? [[Task Types And Statuses]] says an epic uses only `backlog`, `in tasks`, `done` and `wontfix`, then lists only `needs-context`, `ready-for-agent` and `in progress` as limited to the other types, which would leave `ready-for-human` allowed. The code (`canMove`) and the mockup both allow epic to `ready-for-human`. Which is meant? | The spec contradicts itself, so the code follows the second reading and the mockup | If epics are `backlog`-`in tasks`-`done`-`wontfix` only, `canMove` in `board.ts` and the mockup change. If `ready-for-human` stays, the note's sentence changes |
 
 ## Rulings made while building
 
