@@ -55,7 +55,8 @@ function Table({ view, cli, setCli }: { view: AppView; cli: Harness; setCli: (c:
 
   const saved = view.app.modelClasses;
   const save = useMutation({ mutationFn: (modelClasses: ModelClasses) => updateAppSettings({ modelClasses }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings'] }) });
-  const refresh = useMutation({ mutationFn: () => refreshAgentModels(cli), onSuccess: (d) => queryClient.setQueryData(agentModelsQuery(cli).queryKey, d) });
+  // The CLI rides with the request, so a tab switched mid-list still stores the answer under the CLI it came from.
+  const refresh = useMutation({ mutationFn: (c: Harness) => refreshAgentModels(c), onSuccess: (d, c) => queryClient.setQueryData(agentModelsQuery(c).queryKey, d) });
   const form = useForm({ defaultValues: saved, onSubmit: ({ value }) => save.mutate(value) });
   const t = useStore(form.store, (s) => s.values);
   const [edit, setEdit] = useState<{ p: Profile; k: ModelClass } | null>(null);
@@ -93,13 +94,13 @@ function Table({ view, cli, setCli }: { view: AppView; cli: Harness; setCli: (c:
         })}
         <span className="flex-1" />
         <span className="pr-2 pb-2 text-[11px] whitespace-nowrap text-muted-foreground">{list?.fetchedAt ? `listed ${new Date(list.fetchedAt).toLocaleString()}` : lists[cli].isPending ? 'listing…' : 'never listed'}</span>
-        <Button size="sm" variant="outline" className="mb-1" disabled={refresh.isPending} onClick={() => refresh.mutate()}>
+        <Button size="sm" variant="outline" className="mb-1" disabled={refresh.isPending} onClick={() => refresh.mutate(cli)}>
           <RefreshCw aria-hidden className={`size-3.5 ${refresh.isPending ? 'animate-spin' : ''}`} strokeWidth={1.75} />
           {refresh.isPending ? 'Listing…' : 'List again'}
         </Button>
       </div>
-      {list?.error && <p className="m-0 border-l-[3px] border-wait bg-[var(--wait-soft)] px-2.5 py-1.5 text-xs text-wait">{list.error}; showing the list saved earlier</p>}
-      {list && !list.fetchedAt && !list.error && <p className="m-0 border-l-[3px] border-wait bg-[var(--wait-soft)] px-2.5 py-1.5 text-xs text-wait">{cli} has never listed its models on this machine, so its cells are not checked here. Install it, then list again.</p>}
+      {list?.error && <p className="m-0 border-l-[3px] border-wait bg-[var(--wait-soft)] px-2.5 py-1.5 text-xs text-wait">{list.error}{list.fetchedAt && '; showing the list saved earlier'}</p>}
+      {list && !list.fetchedAt && <p className="m-0 border-l-[3px] border-wait bg-[var(--wait-soft)] px-2.5 py-1.5 text-xs text-wait">{cli} has never listed its models on this machine, so its cells are not checked here. Install it, then list again.</p>}
       <ErrorLine error={lists[cli].error ?? refresh.error} />
 
       <div className="overflow-x-auto border border-t-0 border-input bg-card">
@@ -132,7 +133,7 @@ function Table({ view, cli, setCli }: { view: AppView; cli: Harness; setCli: (c:
                 const red = unset(cli, cell, offered[cli]);
                 return (
                   <div key={p} className={`grid border-b border-l border-border transition-opacity ${p === t.inUse ? 'bg-[var(--run-soft)]' : 'opacity-45 hover:opacity-80'}`}>
-                    <button type="button" aria-label={`${p} ${k} ${cli}`} onClick={() => setEdit({ p, k })} className={`grid content-start gap-1 p-3 text-left font-mono hover:bg-black/[0.03] ${editing ? 'shadow-[inset_0_0_0_2px_var(--run)]' : ''}`}>
+                    <button type="button" aria-label={`${p} ${k} ${cli}: ${cell ? [cell.model, cell.effort].filter(Boolean).join(', ') : 'not set'}`} onClick={() => setEdit({ p, k })} className={`grid content-start gap-1 p-3 text-left font-mono hover:bg-black/[0.03] ${editing ? 'shadow-[inset_0_0_0_2px_var(--run)]' : ''}`}>
                       <span className={`truncate text-[13px] ${red ? 'text-fail' : ''}`} title={cell?.model}>
                         {cell ? label(cell) : 'nothing set'}
                       </span>
@@ -150,7 +151,7 @@ function Table({ view, cli, setCli }: { view: AppView; cli: Harness; setCli: (c:
         Red: no model, or no effort picked; every model with levels needs one.
       </p>
 
-      {edit && <Editor key={`${edit.p}${edit.k}${cli}`} cli={cli} p={edit.p} k={edit.k} inUse={t.inUse} cell={t.profiles[edit.p][edit.k][cli]} offered={offered[cli]} onCell={(c) => setCell(edit.p, edit.k, c)} onDone={() => setEdit(null)} />}
+      {edit && <Editor key={`${edit.p}${edit.k}${cli}`} cli={cli} p={edit.p} k={edit.k} inUse={t.inUse} cell={t.profiles[edit.p][edit.k][cli]} offered={offered[cli]} approved={view.app.opencodeModels.map((a) => a.id)} onCell={(c) => setCell(edit.p, edit.k, c)} onDone={() => setEdit(null)} />}
 
       <ErrorLine error={save.error} />
       {changes > 0 && (
@@ -183,11 +184,11 @@ function Table({ view, cli, setCli }: { view: AppView; cli: Harness; setCli: (c:
 }
 
 /** One cell's model and effort. The effort lists only the model's levels, with no "model default"; changing the model keeps the effort only if the new one lists it. */
-function Editor({ cli, p, k, inUse, cell, offered, onCell, onDone }: { cli: Harness; p: Profile; k: ModelClass; inUse: Profile; cell: ClassCell | null; offered: ProviderModel[] | null; onCell: (c: ClassCell | null) => void; onDone: () => void }) {
+function Editor({ cli, p, k, inUse, cell, offered, approved, onCell, onDone }: { cli: Harness; p: Profile; k: ModelClass; inUse: Profile; cell: ClassCell | null; offered: ProviderModel[] | null; approved: string[]; onCell: (c: ClassCell | null) => void; onDone: () => void }) {
   const models = offered ?? [];
   const m = models.find((x) => x.id === cell?.model);
   const levels = m?.efforts ?? [];
-  const problem = cell && cellProblem(cli, cell, offered);
+  const problem = cell && cellProblem(cli, cell, offered, approved);
   const lbl = 'grid gap-1 text-[10px] font-medium tracking-[0.12em] text-muted-foreground uppercase';
   return (
     <div className="mt-2.5 grid items-end gap-3 border border-run bg-card px-3.5 py-3 md:grid-cols-[auto_minmax(0,1fr)_170px_auto]">
@@ -238,10 +239,16 @@ function Editor({ cli, p, k, inUse, cell, offered, onCell, onDone }: { cli: Harn
       {problem && <p className="m-0 font-sans text-xs text-fail md:col-span-4">{problem}</p>}
       {cli === 'opencode' && offered && models.length === 0 && (
         <p className="m-0 font-sans text-xs text-wait md:col-span-4">
-          No approved OpenCode models:{' '}
-          <Link href="/settings/agents/models" className="underline">
-            approve some
-          </Link>
+          {approved.length ? (
+            'opencode lists none of the approved models on this machine.'
+          ) : (
+            <>
+              No approved OpenCode models:{' '}
+              <Link href="/settings/agents/models" className="underline">
+                approve some
+              </Link>
+            </>
+          )}
         </p>
       )}
       <p className="m-0 font-sans text-xs text-muted-foreground md:col-span-4">{p === inUse ? `Anything that asks for ${k} on ${cli} gets this, from the next run on.` : `This applies only while ${p} is the profile in use.`}</p>
