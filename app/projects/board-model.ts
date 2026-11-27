@@ -38,7 +38,8 @@ export function indexTasks(tasks: TaskRow[]): BoardIndex {
   return { byId, kids, column };
 }
 
-function parentOf(t: TaskRow, byId: Map<string, TaskRow>): TaskRow | undefined {
+/** The card this one sits under, when its parent is here and of a type that holds it. */
+export function parentOf(t: TaskRow, byId: Map<string, TaskRow>): TaskRow | undefined {
   const p = t.parentKey === null ? undefined : byId.get(`${t.sourceId}:${t.parentKey}`);
   return p !== undefined && fits(p.type, t.type) ? p : undefined;
 }
