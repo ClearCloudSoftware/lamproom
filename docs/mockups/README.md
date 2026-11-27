@@ -202,6 +202,40 @@ browser, or run `python3 -m http.server` in this folder.
   Keys: `1`–`3` stages, `[`/`]` previous or next commit, `e` expand all,
   `d` dry run.
 
+- **[`model-classes.html`](./model-classes.html)**: superseded by
+  `model-classes-map.html`, kept for the record. A proposed app-wide
+  settings page, *Agents → Model classes*. Flow steps ask for a capability
+  class (`deep`, `standard`, `fast`) instead of a model. The page maps each
+  class to a model and an effort level for each agent CLI, Claude Code and
+  OpenCode. There are three profiles (`quality`, `balanced`, `budget`), each a
+  complete table, and one of them is in use for new runs. The cell editor
+  marks aliases that follow the latest model, such as `opus` (Opus 5.5 today).
+  It warns when an OpenCode model has no variant for the effort you picked and
+  says which level it runs at instead. It also warns when an Opus or Haiku
+  class sets no effort, because those models default to medium. The
+  **Try it** panel works on unsaved edits. *One step* traces how a step
+  resolves, layer by layer, and shows what Lamproom would launch. *A flow*
+  lists every step of a repo flow under all three profiles, and flags steps
+  that name a model directly and steps that can't run under the profile in
+  use. The seeded `budget` profile has no OpenCode model for `deep`, so
+  `opencode-trial.yaml`'s `plan` step shows that refusal.
+
+- **[`model-classes-map.html`](./model-classes-map.html)**: the same settings
+  page reduced to one table, with no flows in it. Tabs above the table pick the
+  agent CLI, so more CLIs only add tabs. A tab carries a red count of cells
+  with no model and a dot for unsaved edits. Classes go down the side and
+  profiles across the top, and each cell shows a model and an effort meter.
+  The meter has one block per effort level that model offers. Every Claude
+  Code model has five; an OpenCode model has only the variants it lists, often
+  none. The legend changes with the tab.
+  The profile in use is the solid column; click another profile's name to
+  switch. Clicking any cell opens an editor. On the OpenCode tab, `budget` has
+  nothing set for `deep`, which shows the error case. There is no "model
+  default" effort: a cell whose model takes effort needs a level. Switching to
+  a model without the cell's level clears it, the cell turns red, and Save
+  stays disabled until it has one.
+  Keys: `[`/`]` previous or next profile, `Esc` close the editor.
+
 ## Conventions
 
 Run `/mockup` and these are applied for you — the skill carries the tokens, a skeleton, the
