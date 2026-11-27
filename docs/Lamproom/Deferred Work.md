@@ -548,11 +548,11 @@ Lamproom is under Apache-2.0 since 2026-11-19: `LICENSE` is the apache.org text,
 Built on `feature/model-classes` (2026-11-27); the design is [[Model Catalogue]], with its departures listed there. Left open:
 
 1. **OpenCode drops an unmatched effort without a message.** The check before launch makes it rare, but a model's variants can change between the check and the launch. The port has no warning event kind, and `error` would fail the run. Add a warning kind, then have `pickVariant` emit it.
-2. **App-start listing.** A CLI that times out after 60 s is abandoned, not killed, since `listModels` takes no abort signal. `harnessStatus` runs outside the timeout, and the listings run one after another.
+2. **App-start listing.** A CLI that times out after 60 s is abandoned, not killed, since `listModels` takes no abort signal; one listing per CLI at a time is shared by every caller, so at most one process per CLI is left hanging. The fix is an abort signal on `listModels`. `harnessStatus` runs outside the timeout, and the listings run one after another.
 3. **Missing tests.** Nothing covers `GET /api/agents/models` or the default list path (real providers, `applySavedKey`).
-4. **Model classes page, accessibility.** A cell button's `aria-label` hides its model and effort. The CLI tabs use `role="tab"` without a tabpanel or arrow-key movement.
+4. **Model classes page, accessibility.** The CLI tabs use `role="tab"` without a tabpanel or arrow-key movement.
 5. **Model classes page, wording and keys.** "N cells need an effort level" does not say which CLI tab holds them. The mockup's `[`, `]` and Escape keys are not built.
 6. **Internal-steps page.** The resolution line does not recheck a saved cell against the CLI's current list.
-7. **`readAppSettings` and `null`.** A `settings.json` that holds `null` now throws in `upgradeOld`; it used to fall back to the defaults.
+7. **Flow designer: no Class select.** The step and flow forms have no Class field: the chip and the summary show the class, and a class is set in the YAML. Typing a model removes the class on that level.
 8. **The launch line nests brackets:** `(claude-code sonnet (standard in balanced))`.
 9. **Machine doctor.** Any `modelRules` failure is reported as "settings.json does not parse".

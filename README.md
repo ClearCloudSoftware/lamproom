@@ -86,7 +86,7 @@ step that `produces: [plan]` writes it, and a later step that `requires: [plan]`
 # flows/review-loop.yaml: a reviewer sends the work back until the review passes.
 budget_usd: 6
 entry: implement
-defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 30 } }
+defaults: { adapter: claude-code, class: standard, limits: { max_turns: 30 } }   # the profile in use picks the model
 steps:
   implement: { prompt: prompts/implement.md, produces: [notes], max_attempts: 3 }
   review:

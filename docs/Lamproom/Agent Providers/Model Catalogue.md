@@ -13,11 +13,15 @@ Each agent CLI provider reports the models it can run and the effort levels each
 ### Departures from the design
 
 - **OpenCode's listing uses the launch environment.** `listModels` starts `opencode serve` with the same filtered environment as a launch (the shared `serverEnv` helper in `opencode/options.ts`), as "same config builder as launch" asks.
+- **Claude's listing starts the CLI as a launch does.** It gets the launch's environment, without `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` (the shared `cliEnv` helper in `claude/options.ts`), `settingSources: []`, so the owner's hooks, MCP servers and plugins are not loaded, and the OS temp folder as its `cwd`.
 - **No run-time warning for an unmatched effort.** The port has no warning event, and an `error` event would fail the run. The adapter still drops an unmatched OpenCode effort at launch without a message. The check before launch makes that rare. See [[Deferred Work#Model classes]].
 - **App-start listing.** Each CLI's listing has a 60 s timeout. A CLI that times out is abandoned, not killed, since `listModels` takes no abort signal. The listing logs a failure and never throws, a corrupt `settings.json` included.
+- **One listing per CLI at a time.** `refreshAgentModels` keeps the listing it started, per data folder and CLI, until it settles, not only until the timeout. App start, the page and the API share it, and each caller still gets the timeout. So a hung CLI holds at most one process per CLI.
 - **`GET /api/agents/models` returns what a cell may hold.** For OpenCode that is the approved ids plus Ollama's local models, not the CLI's raw list. The shape `{ fetchedAt, models, error? }` is as designed.
 - **Settings checks.** `updateAppSettings` checks only the `modelClasses` cells present in the patch; the page sends the whole table.
 - **Effort override.** A step's `effort:` wins. One in `defaults` counts only when the class also came from `defaults`, so a defaults effort never lands on a step's own class.
+- **An inherited effort a step's own model does not take is dropped** (R12). A step with its own `model:` that inherits an effort from `defaults` the model does not list runs without it, and `--check` warns: `steps.x.effort: <model> has no high effort; the high from defaults is dropped`. An effort set on the same level as the model or class is still refused.
+- **A model in `defaults` is warned about once**, as `defaults.model: names a model directly; …`, not once per step.
 - **A direct Ollama model with `effort:` is refused** (it takes none), where the effort used to be dropped.
 - **The launch line** reads `claude-code sonnet (standard in balanced)` inside the existing brackets, so it nests.
 - **Machine doctor** resolves classes too, so a flow that names only classes does not show as unreadable.
@@ -206,7 +210,7 @@ The CLI layer resolves a class to a model before the `RunSpec` is built, in `flo
 2. **Checks.**
    - An empty cell refuses the run before launch: "no `<cli>` model for `<class>` in `<profile>`".
    - An effort the model doesn't list refuses the run as well, both in `--check` and before launch. On the settings page that cell turns red (decision 4).
-3. **A step's own model.** A step with `model:` keeps today's behaviour: it runs that model, and `--check` warns that the step names a model directly.
+3. **A step's own model.** A step with `model:` keeps today's behaviour: it runs that model, and `--check` warns that the step names a model directly (a model in `defaults`: one `defaults.model` warning).
 4. **What gets recorded.** The run records the class, the profile, the model and the effort. This answers half of [[Agent Providers Open Questions]] #12.
 
 ### Run time

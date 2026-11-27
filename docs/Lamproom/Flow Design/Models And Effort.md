@@ -16,7 +16,7 @@ Every agent step names a **model** and an **effort** (how hard it thinks). Check
 
 Agents carry a `default_model` and `default_effort` (PRD §5 `agents`); the step sets its own. Each node on the canvas shows three chips: model, effort, budget — *"its model, its thinking effort, and the most it may spend on one attempt."*
 
-As built in lr-run-flow (2026-10-23), each agent step takes `adapter`, `model` and `effort` from itself or from the flow's `defaults`. `model` has no default (`steps.a.model: required`); `effort` is optional and sent only when set, so unset means the model's own. The terminal names the adapter and model as each run starts: `-- <step> attempt <n> (<adapter> <model>)`.
+As built in lr-run-flow (2026-10-23), each agent step takes `adapter`, `model` and `effort` from itself or from the flow's `defaults`. `model` had no default then (`steps.a.model: required`); since the model classes it is optional, as below. `effort` is optional and sent only when set, so unset means the model's own. The terminal names the adapter and model as each run starts: `-- <step> attempt <n> (<adapter> <model>)`.
 
 Since 2026-11-27 a step usually asks for a class (`deep`, `standard`, `fast`) instead of a model: the profile in use picks the model and effort per agent CLI, and `model:` is the direct override. See [[Model Catalogue]] and [[Run Flow Reference]].
 
