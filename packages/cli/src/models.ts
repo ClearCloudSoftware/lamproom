@@ -25,7 +25,7 @@ export function modelRules(dataDir: string, ollama?: OllamaState): ModelRules {
       const profile = modelClasses.inUse;
       const cell = modelClasses.profiles[profile][cls][cli];
       if (!cell) return { error: `no ${cli} model for ${cls} in ${profile}` };
-      const problem = cellProblem(cli, cell, offeredModels(dataDir, cli));
+      const problem = cellProblem(cli, cell, offeredModels(dataDir, cli), approved.map((a) => a.id));
       return problem ? { error: problem } : { model: cell.model, ...(cell.effort && { effort: cell.effort }), profile };
     },
     efforts: (cli, model) => offeredModels(dataDir, cli)?.find((m) => m.id === model)?.efforts,

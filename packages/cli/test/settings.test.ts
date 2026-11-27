@@ -69,6 +69,9 @@ test('cellProblem: the model must be offered, and the effort one it lists', () =
   assert.equal(cellProblem('claude-code', { model: 'opus', effort: 'max' }, [opus]), undefined);
   assert.equal(cellProblem('claude-code', { model: 'gpt', effort: 'low' }, [opus]), 'gpt is not a claude-code model on this machine');
   assert.equal(cellProblem('opencode', { model: 'openrouter/x/y', effort: 'low' }, [flash]), `openrouter/x/y is not an approved model; approve it in ${MODELS_PAGE}`);
+  // approved, but the CLI's list lacks it (no OpenRouter key when it listed, say): not called unapproved
+  assert.equal(cellProblem('opencode', { model: 'openrouter/x/y', effort: 'low' }, [flash], ['openrouter/x/y']), 'openrouter/x/y is approved, but opencode does not list it on this machine');
+  assert.equal(cellProblem('opencode', { model: 'openrouter/x/z', effort: 'low' }, [flash], ['openrouter/x/y']), `openrouter/x/z is not an approved model; approve it in ${MODELS_PAGE}`);
   // never listed: only the shape is checked
   assert.equal(cellProblem('claude-code', { model: 'opus', effort: null }, null), undefined);
   assert.equal(cellProblem('opencode', { model: 'anything/x', effort: null }, null), undefined);
@@ -123,4 +126,12 @@ test('the Lamproom address is an app setting, for the links in Slack', () => {
   assert.deepEqual(updateAppSettings(data, { address: 'localhost:3000' }), { ok: false, status: 400, error: 'a web address, like http://localhost:3000' });
   assert.equal(updateAppSettings(data, { address: ' http://mac.local:3000/ ' }).ok, true);
   assert.equal(readAppSettings(data).address, 'http://mac.local:3000');
+});
+
+test('a settings.json holding null, or a list, falls back to the defaults', () => {
+  for (const raw of ['null', '[1]']) {
+    const data = temp();
+    writeFileSync(join(data, 'settings.json'), raw);
+    assert.deepEqual(readAppSettings(data), APP_DEFAULTS);
+  }
 });

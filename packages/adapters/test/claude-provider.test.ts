@@ -169,6 +169,14 @@ describe('listModels', () => {
     assert.equal(calls.close, 1);
   });
 
+  test('starts the CLI as a launch does: its own login, no settings files, outside the app folder', async () => {
+    let options: Parameters<ListQueryFn>[0]['options'] | undefined;
+    const listQuery: ListQueryFn = (p) => ((options = p.options), { supportedModels: async () => rows, close: () => {} });
+    const env = { PATH: '/bin', ANTHROPIC_API_KEY: 'sk-x', ANTHROPIC_AUTH_TOKEN: 't' };
+    await new ClaudeCodeProvider({ listQuery, env, claudePath: '/x/claude' }).listModels();
+    assert.deepEqual([options?.env, options?.settingSources, options?.cwd, options?.pathToClaudeCodeExecutable], [{ PATH: '/bin' }, [], tmpdir(), '/x/claude']);
+  });
+
   test('closes the query when supportedModels rejects', async () => {
     const { calls, provider } = fakeList(() => Promise.reject(new Error('no login')));
     await assert.rejects(provider.listModels(), /no login/);

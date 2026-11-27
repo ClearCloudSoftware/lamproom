@@ -51,6 +51,23 @@ test('a list that throws, or never answers, keeps the old file and says why', as
   assert.deepEqual(readAgentModels(data, 'claude-code'), ok.list);
 });
 
+test('one list per CLI at a time: concurrent refreshes share it, and a hung one is not started again until it settles', async () => {
+  const data = temp();
+  let calls = 0;
+  let answer!: (ms: ProviderModel[]) => void;
+  const list: ListFn = () => (calls++, new Promise((r) => (answer = r)));
+  const both = Promise.all([refreshAgentModels(data, 'claude-code', 0, list, T0), refreshAgentModels(data, 'claude-code', 0, list, T0)]);
+  await new Promise((r) => setImmediate(r));
+  answer([m('sonnet')]);
+  const [a, b] = await both;
+  assert.deepEqual([calls, a, b], [1, { list: { fetchedAt: T0.toISOString(), models: [m('sonnet')] } }, a]);
+  // hung: each caller still gets the timeout, but no second process starts
+  const hung: ListFn = () => (calls++, new Promise(() => {}));
+  const late = await refreshAgentModels(data, 'opencode', 0, hung, T0, 10);
+  const later = await refreshAgentModels(data, 'opencode', 0, hung, T0, 10);
+  assert.deepEqual([calls, late.error, later.error], [2, "could not list opencode's models: no answer in 0.01 s", "could not list opencode's models: no answer in 0.01 s"]);
+});
+
 test("OpenCode's cell offers the approved ids of its list, and Ollama's approved models with no efforts; null before the first list", async () => {
   const data = temp();
   assert.equal(offeredModels(data, 'opencode'), null);

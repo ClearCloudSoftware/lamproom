@@ -23,6 +23,12 @@ const LIST_TIMEOUT_MS = 60_000;
 
 const fileOf = (dataDir: string, cli: Harness) => join(dataDir, 'agent-models', `${cli}.json`);
 
+/**
+ * The list being asked for now, per data folder and CLI, kept until it settles (not just until the timeout): callers
+ * meanwhile share it, so a hung CLI holds at most one process per CLI.
+ */
+const inFlight = new Map<string, Promise<ProviderModel[]>>();
+
 /** The list as last saved, or null before the first. */
 export function readAgentModels(dataDir: string, cli: Harness): AgentModels | null {
   try {
@@ -51,7 +57,14 @@ export async function refreshAgentModels(dataDir: string, cli: Harness, maxAgeMs
   let timer: NodeJS.Timeout | undefined;
   try {
     const timeout = new Promise<never>((_, no) => { timer = setTimeout(() => no(new Error(`no answer in ${timeoutMs / 1000} s`)), timeoutMs); });
-    const fresh: AgentModels = { fetchedAt: now.toISOString(), models: await Promise.race([list(cli, readAppSettings(dataDir).agents[cli].path), timeout]) };
+    const key = `${dataDir}\0${cli}`;
+    let pending = inFlight.get(key);
+    if (!pending) {
+      pending = list(cli, readAppSettings(dataDir).agents[cli].path);
+      inFlight.set(key, pending);
+      pending.finally(() => inFlight.delete(key)).catch(() => {}); // the callers see the error
+    }
+    const fresh: AgentModels = { fetchedAt: now.toISOString(), models: await Promise.race([pending, timeout]) };
     writeJsonFile(fileOf(dataDir, cli), fresh);
     return { list: fresh };
   } catch (e) {

@@ -17,9 +17,10 @@ export const defaultDataDir = () =>
  * A file from before model classes, made to fit: each agent keeps only its `path`, and an `internal` entry that still
  * names a model is replaced by its step's default. Without this the whole file would fail the schema and reset.
  */
-function upgradeOld(raw: Record<string, unknown>): Record<string, unknown> {
+function upgradeOld(raw: unknown): unknown {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return raw; // the schema refuses it: the defaults
   const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
-  const out = { ...raw };
+  const out: Record<string, unknown> = { ...raw };
   if ('agents' in raw) out.agents = Object.fromEntries(Object.entries(APP_DEFAULTS.agents).map(([cli, d]) => [cli, 'path' in obj(obj(raw.agents)[cli]) ? { path: obj(obj(raw.agents)[cli]).path } : d]));
   if ('internal' in raw) out.internal = Object.fromEntries(Object.entries(APP_DEFAULTS.internal).map(([id, d]) => [id, id in obj(raw.internal) && !('model' in obj(obj(raw.internal)[id])) ? obj(raw.internal)[id] : d]));
   return out;
@@ -48,7 +49,7 @@ export function updateAppSettings(dataDir: string, edit: Partial<AppSettings>): 
         const cell = mc!.profiles[profile][cls][cli];
         if (!cell) continue;
         if (!offered.has(cli)) offered.set(cli, offeredModels(dataDir, cli));
-        const problem = cellProblem(cli, cell, offered.get(cli)!);
+        const problem = cellProblem(cli, cell, offered.get(cli)!, next.opencodeModels.map((a) => a.id));
         if (problem) return { ok: false, status: 400, error: `${profile} › ${cls} › ${cli}: ${problem}` };
       }
   writeJsonFile(fileOf(dataDir), next);

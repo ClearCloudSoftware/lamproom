@@ -7,6 +7,7 @@
  * See docs/Lamproom/Agent Providers/Claude Code Adapter.md.
  */
 import { EventEmitter, on } from 'node:events';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type { Options, Query, SDKMessage, SDKUserMessage, SpawnOptions } from '@anthropic-ai/claude-agent-sdk';
@@ -14,7 +15,7 @@ import { effortsFrom, ZERO_USAGE } from '@lamproom/core';
 import type { AgentProvider, AgentRun, Capability, NormalizedEvent, ProviderModel, RunResult, RunSpec } from '@lamproom/core';
 import { hostExecHost } from '../../exec/host.ts';
 import { createNormalizer } from './normalize.ts';
-import { buildQuery } from './options.ts';
+import { buildQuery, cliEnv } from './options.ts';
 import { KILL_GRACE_MS, terminate } from '../../exec/terminate.ts';
 
 export type QueryFn = (p: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
@@ -62,7 +63,8 @@ export class ClaudeCodeProvider implements AgentProvider {
     const idle = (async function* (): AsyncGenerator<SDKUserMessage> {
       await new Promise(() => {});
     })();
-    const q = this.listQuery({ prompt: idle, options: { pathToClaudeCodeExecutable: this.claudePath, env: this.env } });
+    // As a launch starts it: its own login and no settings files (hooks, MCP servers, plugins), outside the app's folder.
+    const q = this.listQuery({ prompt: idle, options: { pathToClaudeCodeExecutable: this.claudePath, env: cliEnv(this.env), settingSources: [], cwd: tmpdir() } });
     try {
       return (await q.supportedModels()).map((m) => ({
         id: m.value,

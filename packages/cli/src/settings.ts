@@ -268,10 +268,14 @@ const classes = z.strictObject({ 'claude-code': cell('claude-code'), opencode: c
 const profile = z.strictObject({ deep: classes, standard: classes, fast: classes });
 export const MODEL_CLASSES_SCHEMA = z.strictObject({ inUse: z.enum(PROFILES), profiles: z.strictObject({ quality: profile, balanced: profile, budget: profile }) });
 
-/** Why a cell can't be saved, or undefined. `offered` null: the CLI was never listed, so only the shape is checked. */
-export function cellProblem(cli: Harness, cell: ClassCell, offered: ProviderModel[] | null): string | undefined {
+/**
+ * Why a cell can't be saved, or undefined. `offered` null: the CLI was never listed, so only the shape is checked.
+ * `approved`: OpenCode's approved ids, to tell an unapproved model from an approved one its list lacks.
+ */
+export function cellProblem(cli: Harness, cell: ClassCell, offered: ProviderModel[] | null, approved: string[] = []): string | undefined {
   if (!offered) return undefined;
   const m = offered.find((x) => x.id === cell.model);
+  if (!m && cli === 'opencode' && approved.includes(cell.model)) return `${cell.model} is approved, but opencode does not list it on this machine`;
   if (!m) return cli === 'opencode' ? `${cell.model} is not an approved model; approve it in ${MODELS_PAGE}` : `${cell.model} is not a ${cli} model on this machine`;
   if (!cell.effort) return m.efforts.length ? `${cell.model} needs an effort level: ${m.efforts.join(', ')}` : undefined;
   if (!m.efforts.includes(cell.effort)) return `${cell.model} has no ${cell.effort} effort; it takes ${m.efforts.join(', ') || 'none'}`;
