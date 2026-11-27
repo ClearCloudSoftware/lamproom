@@ -41,6 +41,21 @@ The PRD's importer reads two optional sub-sections: *"`{ import_key, title, body
 
 No source shows what such a sub-section looks like. In the reference parser, a `### Acceptance criteria` heading starts a new block and becomes a separate task keyed `acceptance-criteria`. See [[Parser Edge Cases]] and [[Intake And Import Open Questions]] #2.
 
+## Type and parent: the attribute block
+
+The `{#id}` at the end of a heading, or of a bold bullet's title, can carry two more tokens after the id, in any order and separated by spaces:
+
+```markdown
+## International billing {#intl .epic}
+## Bill in the customer's currency {#bic .story parent=intl}
+- **CHF shows a dollar sign** {#chf .bug parent=bic} — the symbol is wrong
+```
+
+- `.bug`, `.task`, `.story` or `.epic` sets the task's type. At most one.
+- `parent=<key>` names the parent by its key (its explicit id) in the same file. At most one.
+- The id is required: a block that does not start with `#id`, or holds any other token (`.feature`, `owner=me`), or two types, is not an attribute block. It stays in the title and the task has no type.
+- The importer agent's JSON takes the same two facts as `"type"` and `"parent"`; a `parent` is kept only when its text appears in the backlog, and a `type` outside the four is dropped.
+
 ## Explicit ids
 
 | Source | Form |

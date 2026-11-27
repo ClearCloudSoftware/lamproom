@@ -89,3 +89,18 @@ test('agentTasks keeps an import_key only when the backlog has it word for word'
   assert.deepEqual(r.tasks.map((t) => t.importKey), ['AUTH-12', 'export-csv']);
   assert.equal(agentTasks('[]', 'x').ok, false);
 });
+
+test('agentTasks keeps type and parent; parent only when the backlog has it, type only when valid', () => {
+  const out = JSON.stringify([
+    { import_key: 'intl', title: 'Intl billing', type: 'epic' },
+    { import_key: 'bic', title: 'Bill in currency', type: 'story', parent: 'intl' },
+    { title: 'Minor units', type: 'feature', parent: 'made-up' },
+  ]);
+  const r = agentTasks(out, 'Intl billing {#intl}\nBill in currency {#bic parent=intl}\nMinor units');
+  assert.ok(r.ok);
+  assert.deepEqual(r.tasks.map((t) => [t.importKey, t.type, t.parentKey]), [
+    ['intl', 'epic', undefined],
+    ['bic', 'story', 'intl'],
+    ['minor-units', undefined, undefined],
+  ]);
+});

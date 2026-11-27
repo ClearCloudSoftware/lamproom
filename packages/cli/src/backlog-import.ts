@@ -11,7 +11,7 @@
 import { readFileSync, realpathSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { z } from 'zod';
-import type { ParsedTask } from '@lamproom/core';
+import { TASK_TYPES, type ParsedTask, type TaskType } from '@lamproom/core';
 import { keyMarkdownTasks, parseMarkdown } from '@lamproom/adapters';
 import { readAppSettings } from './app-settings.ts';
 import { isFile } from './config.ts';
@@ -71,13 +71,16 @@ const AgentTasks = z.array(
     acceptance_criteria: z.array(z.string()).optional(),
     non_goals: z.array(z.string()).optional(),
     import_key: z.string().optional(),
+    type: z.string().optional(),
+    parent: z.string().optional(),
   }),
 );
 
 /**
  * The agent's output as tasks: the first `[` to the last `]` of its file, as JSON. Its `import_key` is kept only as
  * an explicit id found word for word in the backlog (the skill copies one from the file); one it made up is dropped
- * and the key derived from the title like the parser's. An empty list is not read as "no tasks": a backlog the
+ * and the key derived from the title like the parser's. Its `parent` is kept on the same rule, and a `type` that is
+ * not one of the four is dropped. An empty list is not read as "no tasks": a backlog the
  * agent found nothing in goes to the parser.
  */
 export function agentTasks(output: string, text: string): { ok: true; tasks: ParsedTask[] } | { ok: false; error: string } {
@@ -96,6 +99,8 @@ export function agentTasks(output: string, text: string): { ok: true; tasks: Par
     .map((t) => ({
       title: t.title.trim(),
       ...(t.import_key && /^[\w.-]+$/.test(t.import_key) && text.includes(t.import_key) && { id: t.import_key }),
+      ...((TASK_TYPES as readonly string[]).includes(t.type!) && { type: t.type as TaskType }),
+      ...(t.parent && /^[\w.-]+$/.test(t.parent) && text.includes(t.parent) && { parentId: t.parent }),
       ...(t.body?.trim() && { body: t.body.trim() }),
       ...(t.acceptance_criteria && { acceptanceCriteria: t.acceptance_criteria }),
       ...(t.non_goals && { nonGoals: t.non_goals }),

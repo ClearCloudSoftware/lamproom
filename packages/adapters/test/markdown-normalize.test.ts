@@ -119,3 +119,24 @@ test('AC is an alias for acceptance criteria', () => {
   const [t] = parseMarkdown('## a\n\n### AC\n\n- one\n', 'markdown');
   assert.deepEqual(t?.acceptanceCriteria, ['one']);
 });
+
+test('attribute block: {#id .type parent=key} sets the key, type and parent, in any order after #id', () => {
+  const [epic, story, task] = parseMarkdown('## Intl billing {#intl .epic}\n\n## Bill in currency {#bic .story parent=intl}\n\n## Minor units {#mu parent=bic .task}\n', 'markdown');
+  assert.deepEqual([epic!.importKey, epic!.type, epic!.parentKey], ['intl', 'epic', undefined]);
+  assert.deepEqual([story!.type, story!.parentKey], ['story', 'intl']);
+  assert.deepEqual([task!.type, task!.parentKey], ['task', 'bic']);
+});
+test('attribute block works on shape B bullets too', () => {
+  const [t] = parseMarkdown('## Billing\n\n- **CHF symbol** {#chf .bug parent=bic} — shows $\n', 'markdown');
+  assert.deepEqual([t!.importKey, t!.type, t!.parentKey, t!.title], ['chf', 'bug', 'bic', 'CHF symbol']);
+  assert.equal(t!.body, 'shows $');
+});
+test('a block with an unknown type or token stays in the title, untyped', () => {
+  const [a, b] = parseMarkdown('## A {#a .feature}\n\n## B {#b owner=me}\n', 'markdown');
+  assert.equal(a!.title, 'A {#a .feature}'); assert.equal(a!.type, undefined);
+  assert.equal(b!.title, 'B {#b owner=me}');
+});
+test('a block with two types stays in the title', () => {
+  const [a] = parseMarkdown('## A {#a .bug .task}\n', 'markdown');
+  assert.equal(a!.title, 'A {#a .bug .task}');
+});
