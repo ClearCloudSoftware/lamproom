@@ -164,10 +164,19 @@ function childrenOf(db: LamproomDb, projectId: string, sourceId: string, key: st
     .all();
 }
 
-/** Where a card sits: a container follows its children's columns (an epic goes two levels down). */
+/**
+ * Where a card sits. A container follows the children that fit its level: an epic its
+ * stories (each by its own tasks and bugs) and its direct tasks and bugs, a story its
+ * tasks and bugs. Nothing recurses past two levels, so a cyclic parentKey cannot loop.
+ */
 function columnFor(db: LamproomDb, t: TaskRow): StatusId {
+  if (t.type === 'task' || t.type === 'bug') return t.status;
   const kids = childrenOf(db, t.projectId, t.sourceId, t.importKey);
-  const childColumns = kids.map((k) => (t.type === 'epic' ? columnFor(db, k) : k.status));
+  const childColumns = kids.flatMap((k): StatusId[] => {
+    if (k.type === 'task' || k.type === 'bug') return [k.status];
+    if (t.type === 'epic' && k.type === 'story') return [columnFor(db, k)];
+    return [];
+  });
   return columnOf(t.type, t.status, childColumns);
 }
 

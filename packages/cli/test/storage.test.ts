@@ -211,3 +211,15 @@ test('moveTask: refuses with the rule’s reason, a gone task with 404, a contai
   upsertTask(db, 'p', 'jira', { ...base('KAN-7'), parentKey: 'kan-6' }, now);
   assert.equal(moveTask(db, 'p', 'jira', 'kan-6', 'done').ok, false); // the story is "in tasks" while kan-7 is open
 });
+
+test('moveTask: a self-parented or nested epic does not loop; an epic is in tasks while a grandchild is open', async () => {
+  const db = await freshDb();
+  upsertTask(db, 'p', 'jira', { ...base('KAN-8'), type: 'epic', parentKey: 'kan-8' }, now);
+  assert.equal(moveTask(db, 'p', 'jira', 'kan-8', 'done').ok, true);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-9'), type: 'epic', parentKey: 'kan-8' }, now);
+  assert.equal(typeof moveTask(db, 'p', 'jira', 'kan-8', 'backlog').ok, 'boolean');
+  upsertTask(db, 'p', 'jira', { ...base('KAN-10'), type: 'epic' }, now);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-11'), type: 'story', parentKey: 'kan-10' }, now);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-12'), parentKey: 'kan-11' }, now);
+  assert.equal(moveTask(db, 'p', 'jira', 'kan-10', 'done').ok, false);
+});
