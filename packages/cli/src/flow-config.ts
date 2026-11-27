@@ -253,7 +253,7 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
     if (!filesOk || both(level)) continue; // every step would repeat the folder or task error; both is said above
 
     // A class (standard when neither is named) becomes the model and effort the profile in use gives; without the
-    // rules, as in tests, a step still needs its model. Any effort set beats the cell's.
+    // rules, as in tests, a step still needs its model.
     const { class: asked, ...launchKeys } = merged;
     launchKeys.model = level.model;
     let resolved: AiStep['resolved'];
@@ -265,7 +265,8 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
         continue;
       }
       launchKeys.model = cell.model;
-      launchKeys.effort ??= cell.effort;
+      // The effort set beside the class wins: the step's own, or the defaults' only when the class is theirs too.
+      launchKeys.effort = st.effort ?? (level === st ? undefined : y.defaults?.effort) ?? cell.effort;
       resolved = { class: cls, profile: cell.profile };
     } else if (level.model !== undefined && models?.resolveClass) warnings.push(`${at}.model: names a model directly; class: lets the profile in use pick it`);
     // An effort the model does not take is refused, a named model's too, wherever its CLI's list knows the model.

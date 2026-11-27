@@ -1,10 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FlowDef } from '@lamproom/core';
 import { CLOSING } from '../src/config.ts';
 import type { ModelRules } from '../src/config.ts';
 import { loadFlow, OUTCOME_CLOSING, toMermaid } from '../src/flow-config.ts';
+import { updateAppSettings } from '../src/app-settings.ts';
+import { modelRules } from '../src/models.ts';
+import { APP_DEFAULTS } from '../src/settings.ts';
 import { DELIVERY, flowProject, RUN_IN } from './fixtures/flow.ts';
 
 /** DELIVERY with one piece of text replaced. */
@@ -282,6 +287,29 @@ test('class and model on one level is an error; a step names a model directly wi
   const x = r.config.steps.x.kind === 'ai' ? r.config.steps.x : assert.fail();
   assert.deepEqual([x.run.spec.model, x.run.spec.effort, x.resolved], ['opus', undefined, undefined]);
   assert.deepEqual(r.config.warnings, ['steps.x.model: names a model directly; class: lets the profile in use pick it']);
+});
+
+test('an effort beside a model in defaults does not carry over to a class the step asks for; a step\'s class beats a model in defaults', () => {
+  const r = loadClass(classFlow(', class: standard', 'adapter: claude-code, model: opus, effort: low'), RULES);
+  assert.ok(r.ok, JSON.stringify(r));
+  const x = r.config.steps.x.kind === 'ai' ? r.config.steps.x : assert.fail();
+  assert.deepEqual([x.run.spec.model, x.run.spec.effort, x.resolved, r.config.warnings], ['sonnet', 'high', { class: 'standard', profile: 'balanced' }, []]);
+  // an effort beside the class in defaults still beats the cell's
+  const both = loadClass(classFlow('', 'adapter: claude-code, class: standard, effort: low'), RULES);
+  assert.ok(both.ok && both.config.steps.x.kind === 'ai' && both.config.steps.x.run.spec.effort === 'low', JSON.stringify(both));
+});
+
+test("the app's table: an empty cell and a saved effort the model no longer lists refuse the run, as does a named model's effort", () => {
+  const data = realpathSync(mkdtempSync(join(tmpdir(), 'lr-classes-')));
+  const balanced = { ...APP_DEFAULTS.modelClasses.profiles.balanced, deep: { 'claude-code': null, opencode: null } };
+  assert.ok(updateAppSettings(data, { modelClasses: { ...APP_DEFAULTS.modelClasses, profiles: { ...APP_DEFAULTS.modelClasses.profiles, balanced } } }).ok);
+  // listed after the table was saved: sonnet no longer takes high, the effort balanced's standard cell holds
+  mkdirSync(join(data, 'agent-models'));
+  writeFileSync(join(data, 'agent-models', 'claude-code.json'), JSON.stringify({ fetchedAt: new Date().toISOString(), models: [{ id: 'sonnet', name: 'Sonnet', efforts: ['low', 'medium'] }] }));
+  const rules = modelRules(data);
+  assert.deepEqual(loadClass(classFlow(', class: deep'), rules), { ok: false, errors: ['flow.yaml: steps.x.class: no claude-code model for deep in balanced'] });
+  assert.deepEqual(loadClass(classFlow(''), rules), { ok: false, errors: ['flow.yaml: steps.x.class: sonnet has no high effort; it takes low, medium'] });
+  assert.deepEqual(loadClass(classFlow(', model: sonnet, effort: max'), rules), { ok: false, errors: ['flow.yaml: steps.x.effort: sonnet has no max effort; it takes low, medium'] });
 });
 
 test('without the model rules, a step with no model keeps today\'s error', () => {
