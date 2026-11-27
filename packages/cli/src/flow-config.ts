@@ -268,13 +268,21 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
       // The effort set beside the class wins: the step's own, or the defaults' only when the class is theirs too.
       launchKeys.effort = st.effort ?? (level === st ? undefined : y.defaults?.effort) ?? cell.effort;
       resolved = { class: cls, profile: cell.profile };
-    } else if (level.model !== undefined && models?.resolveClass) warnings.push(`${at}.model: names a model directly; class: lets the profile in use pick it`);
+    } else if (level.model !== undefined && models?.resolveClass) {
+      const direct = `${level === st ? at : 'defaults'}.model: names a model directly; class: lets the profile in use pick it`;
+      if (!warnings.includes(direct)) warnings.push(direct); // a model in defaults is said once
+    }
     // An effort the model does not take is refused, a named model's too, wherever its CLI's list knows the model.
     const { adapter, model, effort } = launchKeys;
     if (adapter && model && effort) {
       const levels = models?.efforts?.(adapter, model);
       const problem = levels && cellProblem(adapter, { model, effort }, [{ id: model, name: model, efforts: levels }]);
-      if (problem) {
+      // An effort inherited from defaults onto a step's own model is dropped (a step's class never inherits one);
+      // one set beside the model is refused.
+      if (problem && st.model !== undefined && st.effort === undefined) {
+        warnings.push(`${at}.effort: ${model} has no ${effort} effort; the ${effort} from defaults is dropped`);
+        delete launchKeys.effort;
+      } else if (problem) {
         err(7, `${at}.effort: ${problem}`);
         continue;
       }

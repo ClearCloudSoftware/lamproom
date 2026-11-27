@@ -315,3 +315,27 @@ test("the app's table: an empty cell and a saved effort the model no longer list
 test('without the model rules, a step with no model keeps today\'s error', () => {
   assert.deepEqual(loadClass(classFlow('')), { ok: false, errors: ['flow.yaml: steps.x.model: required'] });
 });
+
+test("an effort from defaults that a step's own model does not take is dropped with a warning; the step's own is refused", () => {
+  // R12; sonnet takes low and high
+  for (const defaults of ['adapter: claude-code, model: opus, effort: max', 'adapter: claude-code, class: standard, effort: max']) {
+    const r = loadClass(classFlow(', model: sonnet', defaults), RULES);
+    assert.ok(r.ok, `${defaults}: ${JSON.stringify(r)}`);
+    const x = r.config.steps.x.kind === 'ai' ? r.config.steps.x : assert.fail();
+    assert.equal(x.run.spec.effort, undefined);
+    assert.ok(r.config.warnings.includes('steps.x.effort: sonnet has no max effort; the max from defaults is dropped'), JSON.stringify(r.config.warnings));
+  }
+  // a listed inherited effort still carries over
+  const low = loadClass(classFlow(', model: sonnet', 'adapter: claude-code, model: opus, effort: low'), RULES);
+  assert.ok(low.ok && low.config.steps.x.kind === 'ai' && low.config.steps.x.run.spec.effort === 'low', JSON.stringify(low));
+  // the step's own unlisted effort is still refused, as is one beside a model in defaults
+  assert.deepEqual(loadClass(classFlow(', model: sonnet, effort: max', 'adapter: claude-code, effort: low'), RULES), { ok: false, errors: ['flow.yaml: steps.x.effort: sonnet has no max effort; it takes low, high'] });
+  assert.deepEqual(loadClass(classFlow('', 'adapter: claude-code, model: sonnet, effort: max'), RULES), { ok: false, errors: ['flow.yaml: steps.x.effort: sonnet has no max effort; it takes low, high'] });
+});
+
+test('a model in defaults warns once, naming defaults.model', () => {
+  const yaml = 'budget_usd: 1\ndefaults: { adapter: claude-code, model: opus }\nsteps:\n  x: { prompt: prompts/x.md }\n  y: { prompt: prompts/x.md }\nedges: [{ from: x, to: y }]\n';
+  const r = loadClass(yaml, RULES);
+  assert.ok(r.ok, JSON.stringify(r));
+  assert.deepEqual(r.config.warnings, ['defaults.model: names a model directly; class: lets the profile in use pick it']);
+});
