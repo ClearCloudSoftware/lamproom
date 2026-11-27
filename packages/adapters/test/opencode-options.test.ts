@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { RunSpec } from '@lamproom/core';
-import { buildLaunch, pickVariant, splitModel } from '../src/agent/opencode/options.ts';
+import type { Provider } from '@opencode-ai/sdk/v2';
+import { buildLaunch, modelsFromProviders, pickVariant, splitModel, variantsOf } from '../src/agent/opencode/options.ts';
 import { rulesToConfig } from '../src/agent/opencode/permissions.ts';
 
 const spec: RunSpec = {
@@ -143,4 +144,17 @@ test('the step limit applies to every agent', () => {
   for (const a of ['build', 'plan', 'general', 'explore']) {
     assert.equal((config.agent as Record<string, { steps?: number }>)[a]?.steps, 5, a);
   }
+});
+
+test('lists models with the efforts their variants name', () => {
+  const model = (id: string, variants?: string[]) => [id, { id, name: id, variants: Object.fromEntries((variants ?? []).map((v) => [v, {}])) }];
+  const providers = [
+    { id: 'openrouter', name: 'OpenRouter', models: Object.fromEntries([model('deepseek/deepseek-v4.1-flash', ['none', 'low', 'high', 'max']), model('qwen/qwen3-coder')]) },
+    { id: 'ollama', name: 'Ollama', models: Object.fromEntries([model('qwen3-coder:30b')]) },
+  ] as unknown as Provider[];
+  const models = modelsFromProviders(providers);
+  assert.deepEqual(models.map((m) => m.id), ['openrouter/deepseek/deepseek-v4.1-flash', 'openrouter/qwen/qwen3-coder', 'ollama/qwen3-coder:30b']);
+  assert.deepEqual(models.map((m) => m.efforts), [['low', 'high', 'max'], [], []]);
+  assert.deepEqual(variantsOf(providers, 'openrouter', 'deepseek/deepseek-v4.1-flash'), ['none', 'low', 'high', 'max']);
+  assert.deepEqual(variantsOf(providers, 'nope', 'x'), []);
 });

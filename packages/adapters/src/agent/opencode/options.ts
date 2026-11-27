@@ -4,9 +4,9 @@
  * prompt. Pure: the provider supplies paths and secrets in `base`.
  */
 import { pathToFileURL } from 'node:url';
-import { renderPrompt } from '@lamproom/core';
-import type { Effort, RunSpec } from '@lamproom/core';
-import type { Config, PermissionRule } from '@opencode-ai/sdk/v2';
+import { effortsFrom, renderPrompt } from '@lamproom/core';
+import type { Effort, ProviderModel, RunSpec } from '@lamproom/core';
+import type { Config, PermissionRule, Provider } from '@opencode-ai/sdk/v2';
 import { NO_TIME_LIMIT_MS } from '../claude/options.ts';
 import { rulesToConfig, toPermissionRules } from './permissions.ts';
 
@@ -34,6 +34,18 @@ export function splitModel(id: string): { providerID: string; modelID: string } 
   const slash = id.indexOf('/');
   if (slash < 1) throw new Error(`OpenCode model id must be "providerID/modelID", got '${id}'`);
   return { providerID: id.slice(0, slash), modelID: id.slice(slash + 1) };
+}
+
+/** The variant names a model offers; none when the provider or model is not in the list. */
+export function variantsOf(providers: Provider[], providerID: string, modelID: string): string[] {
+  return Object.keys(providers.find((p) => p.id === providerID)?.models[modelID]?.variants ?? {});
+}
+
+/** Every model of every provider, as "providerID/modelID"; its variants that are efforts are its efforts. */
+export function modelsFromProviders(providers: Provider[]): ProviderModel[] {
+  return providers.flatMap((p) =>
+    Object.values(p.models).map((m) => ({ id: `${p.id}/${m.id}`, name: m.name, efforts: effortsFrom(variantsOf(providers, p.id, m.id)) })),
+  );
 }
 
 /** Effort maps onto a model variant only when the model offers one of that name. */

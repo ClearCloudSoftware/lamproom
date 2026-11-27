@@ -49,6 +49,7 @@ function scripted(plays: Record<string, Play[]>) {
     id: 'scripted',
     capabilities: new Set(),
     resolveModel: (m) => m,
+    listModels: async () => [],
     launch: (spec) => {
       const step = (spec.prompt.template ?? '').trim();
       const n = counts[step] ?? 0;
@@ -894,6 +895,7 @@ test('a second Ctrl+C kills a run that its stop did not end', { timeout: 10_000 
     id: 'stuck',
     capabilities: new Set(),
     resolveModel: (m) => m,
+    listModels: async () => [],
     launch: () => {
       const c = spawn('sleep', ['30'], { stdio: 'ignore' });
       child = c;

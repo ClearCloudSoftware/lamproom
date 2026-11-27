@@ -6,6 +6,9 @@
  * this module too; `app-settings.ts` reads and writes the app's file.
  */
 import { z } from 'zod';
+// This file, not the package index: the pages bundle this module, and the index reaches Node-only code.
+import { EFFORTS } from '../../core/src/ports/agent-provider.ts';
+import type { Effort } from '../../core/src/ports/agent-provider.ts';
 
 /** What "Allow from now on" saves on a project (`approvals.ts` matches calls against it): every file edit, or commands starting with `prefix`. */
 export type ApprovalRule = { kind: 'edit' } | { kind: 'shell'; prefix: string };
@@ -21,8 +24,8 @@ export interface Settings { trust: Trust; budget: Budget; escalation: Escalation
 export type SettingKey = keyof Settings;
 /** The agent CLIs Lamproom drives (Agent Providers). */
 export type Harness = 'claude-code' | 'opencode';
-export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
-export type Effort = (typeof EFFORTS)[number];
+export { EFFORTS };
+export type { Effort };
 /** How to run one agent CLI: `path` null for the one on PATH; `model` and `effort` null for the CLI's own. */
 export interface HarnessConfig { path: string | null; model: string | null; effort: Effort | null }
 /**
