@@ -30,6 +30,7 @@ import { appSettingsQuery, inProject, newRunHref, projectsQuery, removeProject, 
 import type { ProjectView } from './api.ts';
 import { Analysis } from './analysis.tsx';
 import { ImportFromJira } from './import-jira.tsx';
+import { ImportMarkdown } from './import-markdown.tsx';
 import { Knowledge } from './knowledge.tsx';
 import { Memory } from './memory.tsx';
 import { FlowSelect } from './flow-select.tsx';
@@ -297,6 +298,7 @@ export function ProjectPage() {
         {p && (
           <>
             <Remove p={p} live={live} />
+            <ImportMarkdown projectId={p.id} />
             <ImportFromJira projectId={p.id} />
             <Button size="sm" asChild>
               <Link href={newRunHref(p)}>

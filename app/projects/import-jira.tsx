@@ -138,6 +138,7 @@ export function ImportFromJira({ projectId }: { projectId: string }) {
       {importId !== undefined && (
         <ImportToast
           importId={importId}
+          label="Jira"
           onClose={() => {
             setImportId(undefined);
             void queryClient.invalidateQueries({ queryKey: ['project-tasks', projectId] });
@@ -148,7 +149,8 @@ export function ImportFromJira({ projectId }: { projectId: string }) {
   );
 }
 
-function ImportToast({ importId, onClose }: { importId: string; onClose: () => void }) {
+/** The import's progress, polled until it ends; `label` names the source in the title. Also used by the markdown import. */
+export function ImportToast({ importId, label, onClose }: { importId: string; label: string; onClose: () => void }) {
   const { slug } = useParams<{ slug: string }>();
   const q = useQuery(importQuery(importId));
   const row = q.data;
@@ -158,14 +160,14 @@ function ImportToast({ importId, onClose }: { importId: string; onClose: () => v
 
   const title =
     row === undefined
-      ? 'Starting Jira import…'
+      ? `Starting ${label} import…`
       : state === 'running'
-        ? 'Importing from Jira…'
+        ? `Importing from ${label}…`
         : state === 'done'
           ? `Imported ${total} ${total === 1 ? 'task' : 'tasks'}`
           : state === 'failed'
-            ? 'Jira import failed'
-            : 'Jira import cancelled';
+            ? `${label} import failed`
+            : `${label} import cancelled`;
 
   const accent =
     state === 'failed'
@@ -195,6 +197,7 @@ function ImportToast({ importId, onClose }: { importId: string; onClose: () => v
           {row.created} created · {row.updated} updated · {row.pages} {row.pages === 1 ? 'page' : 'pages'}
         </p>
       )}
+      {row?.note && <p className="text-xs whitespace-pre-wrap break-words text-muted-foreground">{row.note}</p>}
       {err && (
         <p role="alert" className="text-xs whitespace-pre-wrap break-words text-fail">
           {err}

@@ -85,3 +85,37 @@ test('body stops at acceptance criteria heading', () => {
   assert.equal(t?.body, 'before.');
   assert.deepEqual(t?.acceptanceCriteria, ['one']);
 });
+
+test('shape B: bold bullets under a grouping heading are the tasks', () => {
+  const content = [
+    '## Backlog',
+    '',
+    '- **Filter list by status** — add a dropdown',
+    '* **Export CSV**: from the table',
+    '- **Log out everywhere {#auth-12}**',
+    '- a plain bullet is not a task',
+    '',
+    '### Done when',
+    '',
+    '- every session ends',
+    '',
+    '### Out of scope',
+    '',
+    '- `src/legacy/**`',
+    '',
+  ].join('\n');
+  const tasks = parseMarkdown(content, 'markdown');
+  assert.deepEqual(tasks.map((t) => [t.importKey, t.title, t.body]), [
+    ['filter-list-by-status', 'Filter list by status', 'add a dropdown'],
+    ['export-csv', 'Export CSV', 'from the table'],
+    ['auth-12', 'Log out everywhere', undefined],
+  ]);
+  assert.equal(tasks[0]?.acceptanceCriteria, undefined);
+  assert.deepEqual(tasks[2]?.acceptanceCriteria, ['every session ends']);
+  assert.deepEqual(tasks[2]?.nonGoals, ['src/legacy/**']);
+});
+
+test('AC is an alias for acceptance criteria', () => {
+  const [t] = parseMarkdown('## a\n\n### AC\n\n- one\n', 'markdown');
+  assert.deepEqual(t?.acceptanceCriteria, ['one']);
+});

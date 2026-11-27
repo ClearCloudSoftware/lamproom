@@ -23,6 +23,7 @@ Items were moved from their notes word for word on 2026-11-17 and not checked ag
 - [[#Project memory]]
 - [[#Slack escalation]]
 - [[#Machine doctor]]
+- [[#Markdown backlog import]]
 - [[#Desktop app on Windows]]
 - [[#License]]
 
@@ -358,6 +359,19 @@ Found by the page's final review and left unfixed. None blocks merging. Line num
   instead, or find a loader that resolves `next/server`.
 - **`next dev` once exited with code 1 to show an upgrade notice** for a security advisory on Next 16.4.1, before
   serving anything; starting it again served normally. Worth checking whether Next has a patched release.
+
+## Markdown backlog import
+
+What `feature/markdown-import-agent` (2026-11-27) left for later. It moved the importer-agent-first import from `feature/markdown-task-source` onto the task-source stack. How it works is in [[Backlog Importer Agent]].
+
+| Issue | Effect | Where |
+|---|---|---|
+| The importer agent hasn't run with a real `claude` | It is the main path, but it is tested only with a stand-in `startRun` and run output | `packages/cli/src/backlog-import.ts`, `internal/backlog-importer/SKILL.md`. Import a real backlog once and check the tasks it makes |
+| A restart during the importer's run leaves the import `running` | The server watches the run in memory. After a restart nothing applies the run's tasks, and the row never ends | `startBacklogImport`. Apply the tasks when the run ends (lr-run-flow), or mark `running` rows failed on start |
+| The importer's run takes the repo's folder lock | While another run works in the repo, every markdown import is read by the parser instead, and the note says why | Same as the repo analyst; `startRun` |
+| The *Import markdown* dialog hasn't been used in a browser | The route was checked with `curl` against a dev server (parser path, note saved, project page 200). The paste box, file picker and toast haven't been seen | `app/projects/import-markdown.tsx` |
+| The importer needs `CLAUDE_CODE_OAUTH_TOKEN` on this machine | Its run is sandboxed like any run, so without the token it never starts and the parser reads every backlog. The note says so | Run `claude setup-token` and set the token where Lamproom runs |
+| The parser reads only `##` headings as tasks | [[Backlog File Shapes]] says the reference also took `###`. The stack's parser keeps `##` only (a test pins it), so a `###`-per-task file goes to the agent, or is lost when the agent fails | `packages/adapters/src/ticket/markdown/normalize.ts` |
 
 ## Desktop app on Windows
 

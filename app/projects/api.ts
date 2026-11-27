@@ -72,6 +72,8 @@ export interface ImportRow {
   skipped: number;
   pages: number;
   error: string | null;
+  /** How the import read its source, e.g. the markdown parser standing in for the importer agent. */
+  note: string | null;
 }
 
 export type { AppSettings, CloneJob, GhRepo, GhStatus, Project, ProjectView };
@@ -153,6 +155,10 @@ export const startJiraImport = (projectId: string, jql?: string) => {
   if (jql !== undefined && jql.trim() !== '') params.set('jql', jql.trim());
   return call<{ importId: string; reused: boolean }>(`/api/import/jira?${params.toString()}`, { method: 'POST', body: '{}' });
 };
+
+/** Import a markdown backlog (pasted or uploaded text) into a project; returns the id so the UI can poll `importQuery`. */
+export const startMarkdownImport = (projectId: string, content: string) =>
+  call<{ importId: string }>(`/api/import/markdown?${new URLSearchParams({ project: projectId }).toString()}`, { method: 'POST', body: JSON.stringify({ content }) });
 
 /** One import row, polled every 1.5s while running; the poll stops once state leaves 'running'. */
 export const importQuery = (importId: string) =>

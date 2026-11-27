@@ -57,6 +57,8 @@ export const importsTable = sqliteTable(
     skipped: integer('skipped').notNull().default(0),
     pages: integer('pages').notNull().default(0),
     error: text('error'),
+    /** How the import read its source when that is worth saying, e.g. the markdown parser standing in for the importer agent. */
+    note: text('note'),
   },
   (t) => [index('imports_by_project').on(t.projectId, t.startedAt)],
 );
