@@ -1,6 +1,7 @@
 {
   "name": "@lamproom/cli",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
     "@inquirer/prompts": "^8.7.3",

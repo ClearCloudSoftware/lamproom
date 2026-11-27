@@ -53,7 +53,7 @@ runs on your machine, over your repositories, for one developer.
 ### Install and run
 
 ```bash
-git clone git@github.com:ClearCloudSoftware/flowboard.git lamproom
+git clone git@github.com:ClearCloudSoftware/lamproom.git
 cd lamproom
 pnpm install
 pnpm dev
@@ -168,3 +168,7 @@ lists how to move an existing setup.
 - **[Development](docs/Development.md)**: the flow designer, the desktop app, checks, and moving an old checkout.
 - **[Feature map](docs/feature-map.md)**: a plain-English tour of every component.
 - **[Mockups](docs/mockups/)**: clickable screens built ahead of the code.
+
+## License
+
+Lamproom is licensed under the [Apache License 2.0](LICENSE).
