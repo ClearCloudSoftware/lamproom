@@ -57,7 +57,29 @@ The Agent SDK already exposes this (`sdk.d.ts`, `ModelInfo`):
 - **How to call it.** Start a `query()` whose prompt is an async iterable that never yields, call `supportedModels()`, then end the query. No message is sent, so it costs no tokens. The cost is one CLI start (one to a few seconds).
 - **Login and policy.** The list honours the machine's login and any managed `availableModels` / `deniedModels` policy. An enterprise-restricted machine therefore sees only what it may use.
 - **No default effort.** `ModelInfo` doesn't say which level a model uses when none is given; Opus 5.5's is `medium`, for example. This doesn't matter, because a cell must name a level (decision 2).
-- **Unverified.** The output shape hasn't been checked against a live CLI yet. Task 1 is that check.
+- **Checked live** on 2026-11-27 (Claude Code 2.1.330, SDK 0.3.302, a subscription login). It returned 14 rows:
+
+| `value` | `resolvedModel` | `supportsEffort` | `supportedEffortLevels` |
+|---|---|---|---|
+| `default` | `claude-opus-5-5` | true | low medium high xhigh max |
+| `opus` | `claude-opus-5-5` | true | low medium high xhigh max |
+| `fable` | `claude-fable-5-2` | true | low medium high xhigh max |
+| `sonnet` | `claude-sonnet-5-5` | true | low medium high xhigh max |
+| `haiku` | `claude-haiku-5-5` | true | low medium high xhigh max |
+| `claude-fable-5-1` | `claude-fable-5-1` | true | low medium high xhigh max |
+| `claude-haiku-4-5-20251001` | `claude-haiku-4-5-20251001` | *absent* | *absent* |
+| `claude-sonnet-5` | `claude-sonnet-5` | true | low medium high xhigh max |
+| `claude-opus-5` | `claude-opus-5` | true | low medium high xhigh max |
+| `claude-fable-5` | `claude-fable-5` | true | low medium high xhigh max |
+| `claude-opus-4-8` | `claude-opus-4-8` | true | low medium high xhigh max |
+| `claude-opus-4-7` | `claude-opus-4-7` | true | low medium high xhigh max |
+| `claude-opus-4-6` | `claude-opus-4-6` | true | low medium high max |
+| `claude-sonnet-4-6` | `claude-sonnet-4-6` | true | low medium high max |
+
+  - **Is `default` a row?** Yes. It resolves to `claude-opus-5-5` and its display name is "Default (recommended)".
+  - **Is `resolvedModel` filled in for aliases?** Yes, for every alias. For a pinned id it equals `value`, so `resolvesTo` is left out there.
+  - **What does `supportedEffortLevels` hold when it's absent?** Nothing: on Haiku 4.5 both it and `supportsEffort` are missing, not `false`. A missing list maps to `[]`, so that model has no effort control.
+  - **Does `supportsEffort: true` ever come with no levels?** No.
 
 ### OpenCode: `config.providers()` on a running server
 
