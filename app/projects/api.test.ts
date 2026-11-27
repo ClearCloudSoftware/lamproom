@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ApiError } from '../flows/api.ts';
-import { cloneJobQuery, cloneLost, doctorQuery } from './api.ts';
+import { cloneJobQuery, cloneLost, doctorQuery, moveTaskMutation } from './api.ts';
 
 test('a clone is polled until it ends, through a passing error; only a 404 means Lamproom forgot it', () => {
   const q = cloneJobQuery('j');
@@ -19,4 +19,11 @@ test('doctorQuery: runs again every time the page opens, never on focus or a tim
   assert.equal(doctorQuery.refetchOnMount, 'always');
   assert.equal(doctorQuery.refetchOnWindowFocus, false);
   assert.equal(doctorQuery.staleTime, Infinity);
+});
+
+test('moveTaskMutation: whatever the outcome, the project\'s tasks are refreshed', async () => {
+  const calls: unknown[] = [];
+  const m = moveTaskMutation('p', { invalidateQueries: (f) => { calls.push(f); return Promise.resolve(); } });
+  await (m.onSettled as () => Promise<void>)();
+  assert.deepEqual(calls, [{ queryKey: ['project-tasks', 'p'] }]);
 });
