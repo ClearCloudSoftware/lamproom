@@ -14,13 +14,13 @@ Code: `packages/cli/src/flow-config.ts` (the file), `flow-run.ts` (the command),
 
 ```yaml
 budget_usd: 5                      # required: the most the whole flow may spend, in dollars; 0 for no ceiling
-defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 30 } }
+defaults: { adapter: claude-code, class: standard, limits: { max_turns: 30 } }   # the profile in use picks the model
 steps:
   plan: { prompt: prompts/plan.md, produces: [plan], gate: approval }   # prompts/ sits beside this file
   implement: { prompt: prompts/implement.md, requires: [plan], produces: [notes], max_attempts: 2 }
   tests:
     adapter: opencode              # a second provider in the same flow
-    model: openrouter/deepseek/deepseek-v4.1-flash
+    model: openrouter/deepseek/deepseek-v4.1-flash   # model: names a model directly, in place of class:
     prompt: prompts/tests.md
     requires: [plan]
     produces: [test_notes]
@@ -121,7 +121,9 @@ A step is an **agent step** unless it has `shell`.
 
 | Field | Default | Checked | Meaning |
 |---|---|---|---|
-| any `lr-run-agent` key but `folder` | from `defaults` | as `lr-run-agent` checks it | `adapter`, `model`, `effort`, `system_prompt`, `plugins`, `skills`, `skill`, `permissions`, `guards`, `limits`: see [[Run Config Reference]] |
+| `class` | from `defaults`, else `standard` | `deep`, `standard` or `fast`; not together with `model` | The usual way to choose a model: the profile in use gives the class a model and an effort for the step's `adapter`. A class with no model for that CLI is refused: `steps.a.class: no <cli> model for <class> in <profile>`. The run records the class and the profile in `flow.json`. See [[Model Catalogue]] |
+| `model` | from `defaults` | as `lr-run-agent` checks it | A model named directly, in place of `class`. `--check` warns that the step names a model directly |
+| any other `lr-run-agent` key but `folder` | from `defaults` | as `lr-run-agent` checks it | `adapter`, `effort`, `system_prompt`, `plugins`, `skills`, `skill`, `permissions`, `guards`, `limits`: see [[Run Config Reference]] |
 | `prompt` | none | an existing, non-empty file, relative to the flow file | The step's own instructions, after the task text. An agent step needs `prompt`, `skill` or `system_prompt` |
 | `requires` | `[]` | each produced by a step before this one | Artifact types this step reads. They are listed in its prompt under *Read these first:* |
 | `produces` | `[]` | no two steps produce one type | Artifact types this step must write. They are listed under *Write your output to:*, each at `<folder>/.lamproom/<run folder name>/<type>.md` |

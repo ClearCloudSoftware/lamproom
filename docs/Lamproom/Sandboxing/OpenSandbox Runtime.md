@@ -22,7 +22,7 @@ Built 2026-10-24. It delivers the [[Egress Allowlist]], the [[Credential Injecti
 budget_usd: 1
 sandbox: { runtime: opensandbox, image: lamproom:sandbox }
 steps:
-  implement: { adapter: claude-code, model: sonnet, prompt: implement.md, produces: [notes] }
+  implement: { adapter: claude-code, class: standard, prompt: implement.md, produces: [notes] }
   check: { shell: pnpm test, produces: [check_output] }
 edges:
   - { from: implement, to: check }

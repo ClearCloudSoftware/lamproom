@@ -26,6 +26,7 @@ Items were moved from their notes word for word on 2026-11-17 and not checked ag
 - [[#Markdown backlog import]]
 - [[#Desktop app on Windows]]
 - [[#License]]
+- [[#Model classes]]
 
 ## Run flow engine
 
@@ -541,3 +542,17 @@ There is no Windows machine in the loop yet. For each fix:
 Lamproom is under Apache-2.0 since 2026-11-19: `LICENSE` is the apache.org text, unchanged, `NOTICE` names Clear Cloud Software, Alex's company, as the copyright holder, and every `package.json` says `"license": "Apache-2.0"`. `CONTRIBUTING.md` says contributions come in under the same license. Left open:
 
 1. **Third-party terms once builds ship.** `LICENSE` covers Lamproom's own code only. A packaged Electron app should ship third-party notices, including libvips (LGPL-3.0-or-later, through `sharp`). The Claude Agent SDK, and the Claude Code CLI that `docker/Dockerfile` installs, are Anthropic's, all rights reserved. Check the terms the SDK's `LICENSE.md` links to before redistributing them, for example in a published image.
+
+## Model classes
+
+Built on `feature/model-classes` (2026-11-27); the design is [[Model Catalogue]], with its departures listed there. Left open:
+
+1. **OpenCode drops an unmatched effort without a message.** The check before launch makes it rare, but a model's variants can change between the check and the launch. The port has no warning event kind, and `error` would fail the run. Add a warning kind, then have `pickVariant` emit it.
+2. **App-start listing.** A CLI that times out after 60 s is abandoned, not killed, since `listModels` takes no abort signal. `harnessStatus` runs outside the timeout, and the listings run one after another.
+3. **Missing tests.** Nothing covers `GET /api/agents/models` or the default list path (real providers, `applySavedKey`).
+4. **Model classes page, accessibility.** A cell button's `aria-label` hides its model and effort. The CLI tabs use `role="tab"` without a tabpanel or arrow-key movement.
+5. **Model classes page, wording and keys.** "N cells need an effort level" does not say which CLI tab holds them. The mockup's `[`, `]` and Escape keys are not built.
+6. **Internal-steps page.** The resolution line does not recheck a saved cell against the CLI's current list.
+7. **`readAppSettings` and `null`.** A `settings.json` that holds `null` now throws in `upgradeOld`; it used to fall back to the defaults.
+8. **The launch line nests brackets:** `(claude-code sonnet (standard in balanced))`.
+9. **Machine doctor.** Any `modelRules` failure is reported as "settings.json does not parse".

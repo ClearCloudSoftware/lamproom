@@ -18,6 +18,8 @@ Agents carry a `default_model` and `default_effort` (PRD §5 `agents`); the step
 
 As built in lr-run-flow (2026-10-23), each agent step takes `adapter`, `model` and `effort` from itself or from the flow's `defaults`. `model` has no default (`steps.a.model: required`); `effort` is optional and sent only when set, so unset means the model's own. The terminal names the adapter and model as each run starts: `-- <step> attempt <n> (<adapter> <model>)`.
 
+Since 2026-11-27 a step usually asks for a class (`deep`, `standard`, `fast`) instead of a model: the profile in use picks the model and effort per agent CLI, and `model:` is the direct override. See [[Model Catalogue]] and [[Run Flow Reference]].
+
 ## Logical model ids
 
 > Step defs reference logical ids (`reasoning-high`, `fast-cheap`, `default`) resolved per provider via `resolveModel`. A flow authored for Claude runs on Codex unchanged; only the resolution table differs. — `01-ports.md`, *Logical model ids*

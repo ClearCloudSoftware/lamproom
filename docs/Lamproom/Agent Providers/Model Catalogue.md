@@ -7,8 +7,24 @@ module: Agent Providers
 
 Each agent CLI provider reports the models it can run and the effort levels each model accepts. The *Model classes* settings page is built from these lists, and so are the checks on its table. This note is the implementation brief for that part of the model classes story.
 
-> [!info] Design, not built (2026-11-23; decisions 2026-11-27)
-> Analysed against `dev` at `f65259f`, `@anthropic-ai/claude-agent-sdk` 0.3.302 and `@opencode-ai/sdk` / `opencode` 1.19.3. Mockup: `docs/mockups/model-classes-map.html`.
+> [!info] Built on `feature/model-classes` (2026-11-27; designed 2026-11-23, decisions 2026-11-27)
+> Analysed against `dev` at `f65259f`, `@anthropic-ai/claude-agent-sdk` 0.3.302 and `@opencode-ai/sdk` / `opencode` 1.19.3. Mockup: `docs/mockups/model-classes-map.html`. Not merged into `dev`. The text below is the design; what differs is listed next.
+
+### Departures from the design
+
+- **OpenCode's listing uses the launch environment.** `listModels` starts `opencode serve` with the same filtered environment as a launch (the shared `serverEnv` helper in `opencode/options.ts`), as "same config builder as launch" asks.
+- **No run-time warning for an unmatched effort.** The port has no warning event, and an `error` event would fail the run. The adapter still drops an unmatched OpenCode effort at launch without a message. The check before launch makes that rare. See [[Deferred Work#Model classes]].
+- **App-start listing.** Each CLI's listing has a 60 s timeout. A CLI that times out is abandoned, not killed, since `listModels` takes no abort signal. The listing logs a failure and never throws, a corrupt `settings.json` included.
+- **`GET /api/agents/models` returns what a cell may hold.** For OpenCode that is the approved ids plus Ollama's local models, not the CLI's raw list. The shape `{ fetchedAt, models, error? }` is as designed.
+- **Settings checks.** `updateAppSettings` checks only the `modelClasses` cells present in the patch; the page sends the whole table.
+- **Effort override.** A step's `effort:` wins. One in `defaults` counts only when the class also came from `defaults`, so a defaults effort never lands on a step's own class.
+- **A direct Ollama model with `effort:` is refused** (it takes none), where the effort used to be dropped.
+- **The launch line** reads `claude-code sonnet (standard in balanced)` inside the existing brackets, so it nests.
+- **Machine doctor** resolves classes too, so a flow that names only classes does not show as unreadable.
+- **The page.** The model name sits above the effort meter, not beside it. The mockup's `[`, `]` and Escape keys are not built. An empty cell counts in the tab's "N not set" badge but does not block Save, since a fresh install has every OpenCode cell empty. Only a set model with a missing or unlisted effort blocks Save.
+- **Internal steps.** The resolution line on `/settings/internal` does not recheck the saved cell against the CLI's current list; the run refuses it at launch.
+- **Claude's live list** (task 1) had 14 rows, `default` included.
+- **Live tests.** One free `listModels` case per CLI is written in `claude-live.test.ts` and `opencode-live.test.ts`. It has not been run.
 
 ## The story this serves
 
