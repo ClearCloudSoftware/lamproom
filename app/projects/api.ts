@@ -1,5 +1,6 @@
 /** The projects API, as TanStack Query options and calls. Types are the server's own (`packages/cli/src/projects.ts`). */
-import { queryOptions } from '@tanstack/react-query';
+import { mutationOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
+import type { StatusId, TaskType } from '../../packages/core/src/board.ts';
 import type { GhRepo, GhStatus } from '../../packages/cli/src/github.ts';
 import type { CloneInput, CloneJob } from '../../packages/cli/src/clone.ts';
 import type { NewProject, Project, ProjectEdit, ProjectView } from '../../packages/cli/src/projects.ts';
@@ -41,6 +42,9 @@ export interface TaskRow {
   labels: string[];
   assignees: string[];
   extras: Record<string, unknown>;
+  type: TaskType;
+  parentKey: string | null;
+  status: StatusId;
   acceptance: string[];
   nonGoals: string[];
   hint: { upstream?: string; titleSlug: string };
@@ -59,6 +63,17 @@ export const projectTasksQuery = (projectId: string, sourceId?: string) =>
       return call<{ tasks: TaskRow[]; offset: number; limit: number }>(`/api/projects/${projectId}/tasks?${params.toString()}`);
     },
     refetchInterval: 10_000,
+  });
+
+/** Moves a task to a board status; a 404 or 409 throws an ApiError whose message is the server's reason. Refreshes the project's tasks either way. */
+export const moveTaskMutation = (projectId: string, client: Pick<QueryClient, 'invalidateQueries'>) =>
+  mutationOptions({
+    mutationFn: ({ sourceId, importKey, to }: { sourceId: string; importKey: string; to: StatusId }) =>
+      call<{ task: TaskRow }>(`/api/projects/${projectId}/tasks/${encodeURIComponent(sourceId)}/${encodeURIComponent(importKey)}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: to }),
+      }),
+    onSettled: () => client.invalidateQueries({ queryKey: ['project-tasks', projectId] }),
   });
 
 export interface ImportRow {

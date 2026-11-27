@@ -11,6 +11,7 @@ import {
   getImport,
   getTask,
   listTasks,
+  moveTask,
   openDb,
   recordImport,
   updateImportProgress,
@@ -176,4 +177,49 @@ test('openDb is idempotent for the same path', async () => {
   const a = openDb(p);
   const b = openDb(p);
   assert.equal(a, b);
+});
+
+const base = (key: string): ParsedTask => task(key.toLowerCase(), key, { _hint: { upstream: key, titleSlug: key.toLowerCase() } });
+const now = new Date('2026-11-27T10:00:00Z');
+
+test('a new task stores its type and parent; status starts at backlog, or done when the source says done', async () => {
+  const db = await freshDb();
+  upsertTask(db, 'p', 'jira', { ...base('KAN-2'), type: 'story', parentKey: 'kan-1' }, now);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-3'), extras: { statusCategory: 'done' } }, now);
+  const a = getTask(db, 'p', 'jira', 'kan-2')!;
+  assert.equal(a.type, 'story'); assert.equal(a.parentKey, 'kan-1'); assert.equal(a.status, 'backlog');
+  assert.equal(getTask(db, 'p', 'jira', 'kan-3')!.status, 'done');
+  assert.equal(getTask(db, 'p', 'jira', 'kan-3')!.type, 'task'); // no type from the source → task
+});
+
+test('re-importing updates type and parent but never the status you set', async () => {
+  const db = await freshDb();
+  upsertTask(db, 'p', 'jira', base('KAN-4'), now);
+  assert.equal(moveTask(db, 'p', 'jira', 'kan-4', 'ready-for-human').ok, true);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-4'), type: 'bug', extras: { statusCategory: 'done' } }, now);
+  const t = getTask(db, 'p', 'jira', 'kan-4')!;
+  assert.equal(t.status, 'ready-for-human'); assert.equal(t.type, 'bug');
+});
+
+test('moveTask: refuses with the rule’s reason, a gone task with 404, a container by its children’s column', async () => {
+  const db = await freshDb();
+  assert.deepEqual(moveTask(db, 'p', 'jira', 'nope', 'done'), { ok: false, code: 404, error: 'task not found: nope' });
+  upsertTask(db, 'p', 'jira', base('KAN-5'), now);
+  const r = moveTask(db, 'p', 'jira', 'kan-5', 'needs-info');
+  assert.equal(r.ok, false); assert.equal(!r.ok && r.code, 409); assert.match(!r.ok ? r.error : '', /^Agents set/);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-6'), type: 'story' }, now);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-7'), parentKey: 'kan-6' }, now);
+  assert.equal(moveTask(db, 'p', 'jira', 'kan-6', 'done').ok, false); // the story is "in tasks" while kan-7 is open
+});
+
+test('moveTask: a self-parented or nested epic does not loop; an epic is in tasks while a grandchild is open', async () => {
+  const db = await freshDb();
+  upsertTask(db, 'p', 'jira', { ...base('KAN-8'), type: 'epic', parentKey: 'kan-8' }, now);
+  assert.equal(moveTask(db, 'p', 'jira', 'kan-8', 'done').ok, true);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-9'), type: 'epic', parentKey: 'kan-8' }, now);
+  assert.equal(typeof moveTask(db, 'p', 'jira', 'kan-8', 'backlog').ok, 'boolean');
+  upsertTask(db, 'p', 'jira', { ...base('KAN-10'), type: 'epic' }, now);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-11'), type: 'story', parentKey: 'kan-10' }, now);
+  upsertTask(db, 'p', 'jira', { ...base('KAN-12'), parentKey: 'kan-11' }, now);
+  assert.equal(moveTask(db, 'p', 'jira', 'kan-10', 'done').ok, false);
 });

@@ -126,3 +126,26 @@ test('extractPageInfo returns undefined nextCursor when next_page_token is absen
   assert.equal(info.nextCursor, undefined);
   assert.equal(info.usage.requests, 1);
 });
+
+test('maps issuetype.name to a task type', async () => {
+  const base = (await fixture()).issues[0]!;
+  const typeOf = (name: string) =>
+    normalizeJiraIssue({ ...base, fields: { ...base.fields, issuetype: { id: '1', name } } }, 'jira', new Set()).type;
+  assert.equal(typeOf('Bug'), 'bug');
+  assert.equal(typeOf('Epic'), 'epic');
+  assert.equal(typeOf('Story'), 'story');
+  for (const n of ['Task', 'Sub-task', 'Subtask', 'Spike']) assert.equal(typeOf(n), 'task');
+});
+
+test('parent key becomes the parent importKey, null parent leaves it undefined', async () => {
+  const base = (await fixture()).issues[0]!;
+  const withParent = normalizeJiraIssue(
+    { ...base, fields: { ...base.fields, parent: { key: 'KAN-1' } } },
+    'jira',
+    new Set(),
+  );
+  assert.equal(withParent.parentKey, 'kan-1');
+  const kan1 = normalizeJiraIssue({ key: 'KAN-1', fields: { ...base.fields } }, 'jira', new Set());
+  assert.equal(kan1.importKey, withParent.parentKey);
+  assert.equal(normalizeJiraIssue({ ...base, fields: { ...base.fields, parent: null } }, 'jira', new Set()).parentKey, undefined);
+});

@@ -5,7 +5,7 @@
  * "Settings" always means the settings of the scope you're in, and the two never share the rail.
  */
 import { queryOptions, useQuery } from '@tanstack/react-query';
-import { Activity, ArrowLeft, Blocks, BookOpen, Check, ChevronsUpDown, Coins, Database, FileText, FolderGit2, GitBranch, Inbox, Kanban, LayoutDashboard, LayoutGrid, ListChecks, Settings, SlidersHorizontal, Workflow } from 'lucide-react';
+import { Activity, ArrowLeft, Blocks, BookOpen, Check, ChevronsUpDown, Coins, Database, FileText, FolderGit2, GitBranch, Inbox, Kanban, LayoutDashboard, LayoutGrid, Settings, SlidersHorizontal, Workflow } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -165,9 +165,8 @@ function Rail({ path }: { path: string }) {
           {p ? (
             <SidebarMenu>
               <Item href="/" icon={ArrowLeft} label="All projects" active={false} />
-              <Item href={`/p/${enc(p.slug)}`} icon={LayoutDashboard} label="Overview" active={here === p.slug} />
-              <Soon icon={Kanban} label="Board" />
-              <Item href={`/p/${enc(p.slug)}/tasks`} icon={ListChecks} label="Tasks" active={path === `/p/${enc(p.slug)}/tasks`} />
+              <Item href={`/p/${enc(p.slug)}`} icon={LayoutDashboard} label="Overview" active={path === `/p/${enc(p.slug)}`} />
+              <Item href={`/p/${enc(p.slug)}/tasks`} icon={Kanban} label="Board" active={path === `/p/${enc(p.slug)}/tasks`} />
               {/* ponytail: Runs and Settings are sections of the project page until they get routes of their own */}
               <Item href={`/p/${enc(p.slug)}#runs-h`} icon={Activity} label="Runs" active={false}>
                 <Counts waiting={waiting} running={running} />

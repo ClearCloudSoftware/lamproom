@@ -37,3 +37,9 @@ test('refuses non-positive pageSize', () => {
   assert.throws(() => buildIssuesQuery({ pageSize: 0 }, { owner: 'o', repo: 'r' }), /pageSize/);
   assert.throws(() => buildIssuesQuery({ pageSize: -1 }, { owner: 'o', repo: 'r' }), /pageSize/);
 });
+
+test('query asks for issueType and parent', () => {
+  const { query } = buildIssuesQuery({}, { owner: 'octokit', repo: 'octokit.js' });
+  assert.ok(query.includes('issueType { name }'));
+  assert.ok(query.includes('parent { number }'));
+});

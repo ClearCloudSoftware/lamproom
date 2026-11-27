@@ -17,6 +17,7 @@
  * See docs/superpowers/specs/2026-11-19-task-storage-and-intake-design.md.
  */
 
+import { TASK_TYPES, type StatusId } from '@lamproom/core';
 import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const tasksTable = sqliteTable(
@@ -33,6 +34,10 @@ export const tasksTable = sqliteTable(
     acceptance: text('acceptance', { mode: 'json' }).$type<string[]>().notNull().default([]),
     nonGoals: text('non_goals', { mode: 'json' }).$type<string[]>().notNull().default([]),
     hint: text('hint', { mode: 'json' }).$type<{ upstream?: string; titleSlug: string }>().notNull(),
+    type: text('type', { enum: TASK_TYPES }).notNull().default('task'),
+    parentKey: text('parent_key'),
+    /** The Lamproom board status; never overwritten by a re-import. */
+    status: text('status').$type<StatusId>().notNull().default('backlog'),
     importedAt: text('imported_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -40,6 +45,7 @@ export const tasksTable = sqliteTable(
     primaryKey({ columns: [t.projectId, t.sourceId, t.importKey] }),
     index('tasks_by_project_updated').on(t.projectId, t.updatedAt),
     index('tasks_by_source').on(t.projectId, t.sourceId),
+    index('tasks_by_parent').on(t.projectId, t.sourceId, t.parentKey),
   ],
 );
 
