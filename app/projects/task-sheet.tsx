@@ -150,9 +150,9 @@ function Placement({ projectId, row, ix }: { projectId: string; row: TaskRow; ix
         </dd>
       </dl>
       <h4 className={label}>Move to</h4>
-      {/* Every status shows, so a refused one (an agent’s, say) carries its reason in a tooltip. */}
+      {/* The statuses you own, plus where the card sits now (as in the mockup); a refused one carries its reason in a tooltip. */}
       <div className="flex flex-wrap gap-1">
-        {STATUSES.map((s) => {
+        {STATUSES.filter((s) => s.owner === 'you' || s.id === column).map((s) => {
           const why = canMove(row.type, column, s.id);
           if (why === 'same')
             return (
