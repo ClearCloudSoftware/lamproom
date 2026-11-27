@@ -78,14 +78,19 @@ export function offeredModels(dataDir: string, cli: Harness): ProviderModel[] | 
  * `prepareRun` uses). Errors are logged, never thrown.
  */
 export async function listAllAgentModels(dataDir: string, list?: ListFn, log: (line: string) => void = console.error, fetchFn: typeof fetch = fetch): Promise<void> {
-  const { agents, opencodeModels } = readAppSettings(dataDir);
-  for (const cli of Object.keys(HARNESSES) as Harness[]) {
-    if (!(await harnessStatus(cli, agents[cli].path)).installed) continue;
-    const { error } = await refreshAgentModels(dataDir, cli, 0, list);
-    if (error) log(error);
-  }
-  if (opencodeModels.some((m) => isLocal(m.id))) {
-    const { error } = await refreshOllama(dataDir, process.env, fetchFn);
-    if (error) log(error);
+  try {
+    const { agents, opencodeModels } = readAppSettings(dataDir);
+    // ponytail: one at a time, and harnessStatus (up to ~2 x 20 s) is outside the 60 s list timeout; it only delays the later CLIs. Run them in parallel if that is felt.
+    for (const cli of Object.keys(HARNESSES) as Harness[]) {
+      if (!(await harnessStatus(cli, agents[cli].path)).installed) continue;
+      const { error } = await refreshAgentModels(dataDir, cli, 0, list);
+      if (error) log(error);
+    }
+    if (opencodeModels.some((m) => isLocal(m.id))) {
+      const { error } = await refreshOllama(dataDir, process.env, fetchFn);
+      if (error) log(error);
+    }
+  } catch (e) {
+    log(`could not list the agent CLIs' models: ${(e as Error).message}`); // a settings.json that does not parse, say
   }
 }

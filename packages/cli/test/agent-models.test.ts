@@ -121,3 +121,12 @@ test('app start: Ollama not answering keeps its saved list and logs its error li
   assert.equal(lines.length, 1);
   assert.match(lines[0], /Ollama does not answer on http:\/\/127\.0\.0\.1:11434/);
 });
+
+test('app start: a settings.json that does not parse is logged, not thrown', async () => {
+  const data = temp();
+  writeFileSync(join(data, 'settings.json'), '{"agents": ');
+  const lines: string[] = [];
+  await listAllAgentModels(data, async () => assert.fail('listed with no settings'), (l) => lines.push(l));
+  assert.equal(lines.length, 1);
+  assert.match(lines[0], /could not list the agent CLIs' models/);
+});
