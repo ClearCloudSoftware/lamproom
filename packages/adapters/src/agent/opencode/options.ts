@@ -44,13 +44,32 @@ export function variantsOf(providers: Provider[], providerID: string, modelID: s
 /** Every model of every provider, as "providerID/modelID"; its variants that are efforts are its efforts. */
 export function modelsFromProviders(providers: Provider[]): ProviderModel[] {
   return providers.flatMap((p) =>
-    Object.values(p.models).map((m) => ({ id: `${p.id}/${m.id}`, name: m.name, efforts: effortsFrom(variantsOf(providers, p.id, m.id)) })),
+    Object.values(p.models).map((m) => ({ id: `${p.id}/${m.id}`, name: m.name, efforts: effortsFrom(Object.keys(m.variants ?? {})) })),
   );
 }
 
 /** Effort maps onto a model variant only when the model offers one of that name. */
 export function pickVariant(effort: Effort | undefined, variants: string[]): string | undefined {
   return effort && variants.includes(effort) ? effort : undefined;
+}
+
+/**
+ * The env of every `opencode serve` Lamproom starts: the owner's OPENCODE_* settings (extra config, OPENCODE_PERMISSION,
+ * sharing, experiments) would change what the run may do, so only OpenCode's credentials pass. An inherited Anthropic
+ * key would silently bill the API for an anthropic/... model, so it stays out as on the Claude adapter.
+ */
+export function serverEnv(inheritedEnv: NodeJS.ProcessEnv, configHome: string): NodeJS.ProcessEnv {
+  const keep = (k: string) => (k.startsWith('OPENCODE_') ? OPENCODE_CREDENTIALS.includes(k) : !ANTHROPIC_KEYS.includes(k));
+  const inherited = Object.fromEntries(Object.entries(inheritedEnv).filter(([k]) => keep(k)));
+  return {
+    ...(inherited as NodeJS.ProcessEnv), // a cast for the web app's typecheck: Next's types require NODE_ENV of ProcessEnv
+    XDG_CONFIG_HOME: configHome,
+    OPENCODE_DISABLE_PROJECT_CONFIG: '1',
+    OPENCODE_DISABLE_CLAUDE_CODE: '1',
+    // ~/.agents/skills would load beside the step's, and one of the same name could stand in for its skill.
+    OPENCODE_DISABLE_EXTERNAL_SKILLS: '1',
+    OPENCODE_DISABLE_AUTOUPDATE: '1',
+  };
 }
 
 /** `spec.model` must already be resolved to "providerID/modelID". */
@@ -103,19 +122,8 @@ export function buildLaunch(
     .filter(Boolean)
     .join('\n\n');
 
-  // The owner's OPENCODE_* settings (extra config, OPENCODE_PERMISSION, sharing, experiments) would change what
-  // the run may do; only OpenCode's credentials pass. An inherited Anthropic key would silently bill the API for
-  // an anthropic/... model, so it stays out as on the Claude adapter.
-  const keep = (k: string) => (k.startsWith('OPENCODE_') ? OPENCODE_CREDENTIALS.includes(k) : !ANTHROPIC_KEYS.includes(k));
-  const inherited = Object.fromEntries(Object.entries(base.env).filter(([k]) => keep(k)));
   const env: NodeJS.ProcessEnv = {
-    ...(inherited as NodeJS.ProcessEnv), // a cast for the web app's typecheck: Next's types require NODE_ENV of ProcessEnv
-    XDG_CONFIG_HOME: base.configHome,
-    OPENCODE_DISABLE_PROJECT_CONFIG: '1',
-    OPENCODE_DISABLE_CLAUDE_CODE: '1',
-    // ~/.agents/skills would load beside the step's, and one of the same name could stand in for its skill.
-    OPENCODE_DISABLE_EXTERNAL_SKILLS: '1',
-    OPENCODE_DISABLE_AUTOUPDATE: '1',
+    ...serverEnv(base.env, base.configHome),
     OPENCODE_SERVER_PASSWORD: base.password,
     OPENCODE_CONFIG_CONTENT: JSON.stringify(config),
   };

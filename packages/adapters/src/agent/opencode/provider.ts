@@ -21,7 +21,7 @@ import { ZERO_USAGE } from '@lamproom/core';
 import type { AgentProvider, AgentRun, Capability, NormalizedEvent, ProviderModel, RunResult, RunSpec } from '@lamproom/core';
 import { hostExecHost } from '../../exec/host.ts';
 import { createNormalizer } from './normalize.ts';
-import { buildLaunch, modelsFromProviders, pickVariant, variantsOf } from './options.ts';
+import { buildLaunch, modelsFromProviders, pickVariant, serverEnv, variantsOf } from './options.ts';
 import { actionFor, approvalCalls, replyFor, toPermissionRules } from './permissions.ts';
 import { ServerStartError, startServer } from './server.ts';
 import type { StartedServer } from './server.ts';
@@ -83,7 +83,7 @@ export class OpencodeProvider implements AgentProvider {
       server = await startServer(hostExecHost, {
         opencodePath: this.opencodePath,
         cwd: configHome,
-        env: { ...this.env, XDG_CONFIG_HOME: configHome, OPENCODE_SERVER_PASSWORD: password },
+        env: { ...serverEnv(this.env, configHome), OPENCODE_SERVER_PASSWORD: password },
         killGraceMs: this.killGraceMs,
       });
       const client = createOpencodeClient({

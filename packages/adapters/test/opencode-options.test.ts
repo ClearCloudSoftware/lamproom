@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { RunSpec } from '@lamproom/core';
 import type { Provider } from '@opencode-ai/sdk/v2';
-import { buildLaunch, modelsFromProviders, pickVariant, splitModel, variantsOf } from '../src/agent/opencode/options.ts';
+import { buildLaunch, modelsFromProviders, pickVariant, serverEnv, splitModel, variantsOf } from '../src/agent/opencode/options.ts';
 import { rulesToConfig } from '../src/agent/opencode/permissions.ts';
 
 const spec: RunSpec = {
@@ -157,4 +157,13 @@ test('lists models with the efforts their variants name', () => {
   assert.deepEqual(models.map((m) => m.efforts), [['low', 'high', 'max'], [], []]);
   assert.deepEqual(variantsOf(providers, 'openrouter', 'deepseek/deepseek-v4.1-flash'), ['none', 'low', 'high', 'max']);
   assert.deepEqual(variantsOf(providers, 'nope', 'x'), []);
+});
+
+test('the server env drops the owner config and Anthropic keys, and keeps OpenCode credentials', () => {
+  const env = serverEnv(
+    { PATH: '/bin', ANTHROPIC_API_KEY: 'a', ANTHROPIC_AUTH_TOKEN: 'b', OPENCODE_CONFIG: '/x.json', OPENCODE_CONFIG_CONTENT: '{}', OPENCODE_API_KEY: 'k', OPENROUTER_API_KEY: 'o' },
+    '/tmp/cfg',
+  );
+  assert.deepEqual(Object.keys(env).sort(), ['OPENCODE_API_KEY', 'OPENCODE_DISABLE_AUTOUPDATE', 'OPENCODE_DISABLE_CLAUDE_CODE', 'OPENCODE_DISABLE_EXTERNAL_SKILLS', 'OPENCODE_DISABLE_PROJECT_CONFIG', 'OPENROUTER_API_KEY', 'PATH', 'XDG_CONFIG_HOME']);
+  assert.equal(env.XDG_CONFIG_HOME, '/tmp/cfg');
 });
