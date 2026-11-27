@@ -5,7 +5,7 @@ module: Board
 
 # Task Types And Statuses
 
-> **Proposal, 2026-11-17; open questions decided 2026-11-19; epic added 2026-11-27** (see [Decisions](#decisions-2026-11-19)). Still open: [whether you should be able to create statuses](#open-question-should-you-be-able-to-create-statuses-2026-11-27). How Jira builds workflows out of statuses, what Lamproom should take from it, and whether Lamproom should have a **story** type that a flow splits into tasks. Mocked up in [`types.html`](../../mockups/types.html) and [`board.html`](../../mockups/board.html). Nothing here is built: the code has no `tasks` table yet.
+> **Proposal, 2026-11-17; open questions decided 2026-11-19; epic added 2026-11-27** (see [Decisions](#decisions-2026-11-19)). Still open: [whether you should be able to create statuses](#open-question-should-you-be-able-to-create-statuses-2026-11-27). How Jira builds workflows out of statuses, what Lamproom should take from it, and whether Lamproom should have a **story** type that a flow splits into tasks. Mocked up in [`types.html`](../../mockups/types.html) and [`board.html`](../../mockups/board.html). **Partly built, 2026-11-27:** the board shows task types, epics and stories, and you can move a card between your statuses. The rest is still proposal. [[Board Handoff]] lists what was built and what was decided. What the branch left out is in [What is built](#what-is-built).
 
 **Short answer.**
 
@@ -40,7 +40,7 @@ What not to copy:
   - The triage agent checks every card moved to `ready-for-agent`, which works like a **validator**.
   - The provider command queued after each move works like a **post function**.
 - **One default flow per project.** A task pins a version of it ([[Project Default Flow]]). The docs list "several flows per project" as a gap.
-- **No task type and no parent task**, neither in the [[Intake Data Model]] nor in the code.
+- **A task type and a parent**, since 2026-11-27. A task stores `type`, `parent_key` and `status` (see [What is built](#what-is-built)). The [[Intake Data Model]] note doesn't mention them yet.
 
 Lamproom has a layer Jira doesn't: the **flow**. In Jira, a team adds statuses such as *In Review* or *QA* inside the In Progress category. In Lamproom, those are the steps of a run, shown as the flow bar on an `in progress` card. **Don't turn flow steps into statuses.** Statuses say who holds the card. Steps say what the run is doing.
 
@@ -59,6 +59,27 @@ Lamproom has a layer Jira doesn't: the **flow**. In Jira, a team adds statuses s
 | workflow scheme | **Task types** in project settings: type → flow. A status that only some types use lists them (`in tasks`: story, epic). |
 | issue type | task type: `bug`, `task`, `story`, `epic` |
 | Epic / Story / Sub-task | epic / story / task. A flow's steps sit below a task. |
+
+## What is built
+
+The branch `feature/board-task-types` built the board half of this note, on the fixed list of ten statuses:
+
+- A task stores a **type**, a **parent key** and a Lamproom **status**. Jira, GitHub, the markdown parser and the backlog-importer agent fill in the type and parent.
+- The board draws one column per status. Cards are grouped epic, then story, then task, with the epic picker and the type filter. Epics and stories look like tinted boxes.
+- You can move a card between the statuses you own from its sheet. The move is stored in Lamproom only.
+
+What it did **not** build. Each is its own plan:
+
+- Writing moves back to the provider, and the sync queue.
+- The triage agent and the `ready-for-agent` check.
+- Starting runs from the board.
+- `story-breakdown`, `story-land` and story branches.
+- The task types settings page (type to flow).
+- Custom statuses. [Whether to have them](#open-question-should-you-be-able-to-create-statuses-2026-11-27) is still open.
+- Drag and drop, and keyboard navigation.
+- `## status` sections in `BACKLOG.md`.
+
+The data model below is still the proposal. The code keeps the status as a text column on `tasks` and the parent as `parent_key` (the parent's import key in the same source), with no `statuses` or `task_types` table.
 
 ## Statuses: category, owner, rules
 

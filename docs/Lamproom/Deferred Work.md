@@ -24,6 +24,7 @@ Items were moved from their notes word for word on 2026-11-17 and not checked ag
 - [[#Slack escalation]]
 - [[#Machine doctor]]
 - [[#Markdown backlog import]]
+- [[#Board]]
 - [[#Desktop app on Windows]]
 - [[#License]]
 
@@ -372,6 +373,19 @@ What `feature/markdown-import-agent` (2026-11-27) left for later. It moved the i
 | The *Import markdown* dialog hasn't been used in a browser | The route was checked with `curl` against a dev server (parser path, note saved, project page 200). The paste box, file picker and toast haven't been seen | `app/projects/import-markdown.tsx` |
 | The importer needs `CLAUDE_CODE_OAUTH_TOKEN` on this machine | Its run is sandboxed like any run, so without the token it never starts and the parser reads every backlog. The note says so | Run `claude setup-token` and set the token where Lamproom runs |
 | The parser reads only `##` headings as tasks | [[Backlog File Shapes]] says the reference also took `###`. The stack's parser keeps `##` only (a test pins it), so a `###`-per-task file goes to the agent, or is lost when the agent fails | `packages/adapters/src/ticket/markdown/normalize.ts` |
+
+## Board
+
+What `feature/board-task-types` (2026-11-27) left unfixed. It built task types, epics and stories on the project board. What it built is in [[Board Handoff]]. Work it didn't build is in [[Task Types And Statuses]].
+
+| Issue | Effect | Where |
+|---|---|---|
+| Moves aren't written back to the provider | A move stays in Lamproom. Jira, GitHub and the markdown file never hear of it | `moveTask` in `packages/cli/src/storage.ts` |
+| A Jira task directly under an epic shows inside the epic's box, but the epic's progress bar counts only stories | An epic with only direct tasks reads "0 of 0 stories done" | `countedKids` in `app/projects/board-group.tsx` |
+| A GitHub sub-issue whose parent is in another repository gets `parentKey github-<n>` | It can match an issue with the same number in this repo and attach to the wrong parent | `normalizeIssueNode` in `packages/adapters/src/ticket/github/normalize.ts` |
+| The filter state keeps a vanished epic's id | The epic filter applies again if that epic comes back | `Filters` in `app/projects/board-model.ts` and the board's `useState` |
+| The disabled *Move to* buttons' tooltip wrapper puts `aria-label` on a span with no role | A screen reader may ignore the reason | `app/projects/task-sheet.tsx` |
+| The board container's `max-w-7xl` clips columns on a wide board | With all ten columns shown, the last one is cut off until you scroll sideways | `app/projects/tasks-board.tsx` |
 
 ## Desktop app on Windows
 
