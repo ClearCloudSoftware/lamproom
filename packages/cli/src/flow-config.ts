@@ -15,7 +15,7 @@ import type { ModelRules, RunConfig } from './config.ts';
 import { PROJECT_FILE, projectSettings } from './project.ts';
 import type { Limits } from './project.ts';
 import type { Isolation } from './isolation.ts';
-import { isLocal } from './settings.ts';
+import { CLASSES, isLocal } from './settings.ts';
 
 export const OUTCOME_CLOSING =
   'Before you stop, report your verdict with the set_outcome tool: "pass" if the work meets the task, "fail" if it does not, with a one-line reason.';
@@ -53,7 +53,8 @@ const BAD_NAME = 'name may only use lowercase letters, digits, - and _';
 const PSEUDO_STEP = 'no START or END here; a flow starts at the step no edge points to (or the one entry: names) and ends when nothing is left to run';
 
 /** lr-run-agent's keys, minus `folder`: every one optional, so `defaults` can fill it. */
-const Launch = RunSchema.omit({ folder: true }).partial();
+// `class` is read but not resolved yet (Task 5 of the model-classes plan): it is stripped before the launch config is built.
+const Launch = RunSchema.omit({ folder: true }).partial().extend({ class: z.enum(CLASSES).optional() });
 const LAUNCH_KEYS = new Set(Object.keys(Launch.shape));
 const StepSchema = Launch.extend({
   requires: z.array(z.string()).optional(),
@@ -243,7 +244,9 @@ export function loadFlow(yamlPath: string, baseDir: string, run?: RunInputs, tex
     if (!filesOk) continue; // every step would repeat the folder or task error
 
     // The task file is every step's preamble; the step's own prompt is its template.
-    const r = configFromObject({ ...merged, folder, prompt: taskAbs }, recipeDir, models);
+    const launchKeys = { ...merged };
+    delete launchKeys.class;
+    const r = configFromObject({ ...launchKeys, folder, prompt: taskAbs }, recipeDir, models);
     if (!r.ok) {
       r.errors.forEach((l) => err(7, `${at}.${l}`));
       continue;

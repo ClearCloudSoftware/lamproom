@@ -24,7 +24,7 @@ function stubs(data: string) {
     chmodSync(file, 0o755);
     return file;
   };
-  value(updateAppSettings(data, { agents: { 'claude-code': { path: bin('claude'), model: 'sonnet', effort: null }, opencode: { path: bin('opencode'), model: null, effort: null } } }));
+  value(updateAppSettings(data, { agents: { 'claude-code': { path: bin('claude') }, opencode: { path: bin('opencode') } } }));
 }
 
 test('a refresh saves the list; a fresh one is not listed again, and maxAgeMs 0 lists anyway', async () => {
@@ -80,7 +80,7 @@ test('app start: a CLI that fails does not stop the next, and one line names it'
 
 test('app start: a CLI that is not installed is not listed', async () => {
   const data = temp();
-  value(updateAppSettings(data, { agents: { 'claude-code': { path: '/nonexistent/claude', model: 'sonnet', effort: null }, opencode: { path: '/nonexistent/opencode', model: null, effort: null } } }));
+  value(updateAppSettings(data, { agents: { 'claude-code': { path: '/nonexistent/claude' }, opencode: { path: '/nonexistent/opencode' } } }));
   await listAllAgentModels(data, async () => assert.fail('listed a CLI that is not there'), () => {});
 });
 

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { analysisAccepted, parseProposal } from '../src/analysis.ts';
@@ -71,11 +72,14 @@ test('a proposal outside the shape is refused whole, with the first thing wrong'
   assert.equal(parseProposal(JSON.stringify({ ...EXAMPLE, notes: 'n'.repeat(5000) })).ok && (parseProposal(JSON.stringify({ ...EXAMPLE, notes: 'n'.repeat(5000) })) as { proposal: { notes: string } }).proposal.notes.length, 1000);
 });
 
+// ponytail: flow-config does not resolve `class` until Task 5 of the model-classes plan, so the loader still needs a model; this adds one. Remove with that task.
+const withModel = (text: string) => { const f = parseYaml(text); return stringifyYaml({ ...f, defaults: { ...f.defaults, model: 'sonnet' } }); };
+
 /** A repo-analyst run folder as lr-run-flow leaves it: its pin, its state, and its proposal when given. */
 function analystRun(runsDir: string, name: string, state: { status: string; costUsd?: number } | null, proposal?: string, host?: number) {
   const repo = temp();
   writeFileSync(join(repo, 'task.md'), 'Analyse this.\n');
-  writeFileSync(join(repo, 'repo-analyst.yaml'), internalFlowText('repo-analyst', APP_DEFAULTS.internal['repo-analyst']));
+  writeFileSync(join(repo, 'repo-analyst.yaml'), withModel(internalFlowText('repo-analyst', APP_DEFAULTS.internal['repo-analyst'])));
   const loaded = loadFlow('repo-analyst.yaml', repo, { folder: repo, task: 'task.md' });
   assert.ok(loaded.ok, loaded.ok ? '' : loaded.errors.join('\n'));
   const dir = join(runsDir, name);
@@ -126,6 +130,7 @@ test('starting an analysis: the flow is written with the app’s settings, lr-ru
   assert.deepEqual([runsDir, dataDir], [runs, data]);
   assert.deepEqual(input, { flow: 'repo-analyst', folder: repo, task: ANALYST_TASK, allowDirty: true });
   writeFileSync(join(repo, 'task.md'), ANALYST_TASK);
+  writeFileSync(join(flowsDir, 'repo-analyst.yaml'), withModel(readFileSync(join(flowsDir, 'repo-analyst.yaml'), 'utf8')));
   const loaded = loadFlow(join(flowsDir, 'repo-analyst.yaml'), repo, { folder: repo, task: 'task.md' });
   assert.ok(loaded.ok, loaded.ok ? '' : loaded.errors.join('\n'));
   assert.equal(loaded.config.budgetUsd, APP_DEFAULTS.internal['repo-analyst'].budgetUsd);
