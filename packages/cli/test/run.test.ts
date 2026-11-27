@@ -61,7 +61,7 @@ const readLog = (path: string) =>
 
 /** An AgentProvider whose single run is whatever `run` returns. */
 function fake(run: () => AgentRun): AgentProvider {
-  return { id: 'fake', capabilities: new Set(), resolveModel: (m) => m, launch: run };
+  return { id: 'fake', capabilities: new Set(), resolveModel: (m) => m, listModels: async () => [], launch: run };
 }
 
 test('a successful run prints, logs and exits 0', async () => {

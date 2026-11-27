@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { NormalizedEvent, RunSpec } from '@lamproom/core';
+import { EFFORTS } from '@lamproom/core';
 import { OpencodeProvider } from '../src/agent/opencode/provider.ts';
 
 const model = process.env.LAMPROOM_OPENCODE_MODEL;
@@ -72,4 +73,10 @@ test('guard plugin blocks a write outside the worktree', live, async () => {
   assert.equal(existsSync(target), false);
   const denied = events.find((e) => e.type === 'tool_result' && !e.ok);
   assert.match(JSON.stringify(denied && 'output' in denied ? denied.output : ''), /Write outside the worktree/);
+});
+
+test('lists the models and their efforts', live, async () => {
+  const models = await new OpencodeProvider({ models: { default: model! } }).listModels();
+  assert.ok(models.length > 0);
+  for (const m of models) assert.deepEqual(m.efforts, EFFORTS.filter((e) => m.efforts.includes(e)), m.id);
 });

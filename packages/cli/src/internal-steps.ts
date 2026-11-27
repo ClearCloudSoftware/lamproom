@@ -1,7 +1,7 @@
 /**
  * The steps Lamproom runs for itself: one-step flows in `internal/<id>/flow.yaml`, beside their skill. They are
  * never in the library and never copied into a project. The file fixes what each may touch; the app's `internal`
- * setting picks the agent CLI, model, effort and budget it runs on, for every project.
+ * setting picks the agent CLI, model class and budget it runs on, for every project.
  */
 import { readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -16,6 +16,6 @@ export function internalFlowText(id: InternalStep, cfg: InternalStepConfig): str
   const dir = join(INTERNAL_DIR, id);
   const flow = parse(readFileSync(join(dir, 'flow.yaml'), 'utf8'));
   for (const step of Object.values<{ skills?: string[] }>(flow.steps)) step.skills = [dir];
-  const defaults = { adapter: cfg.adapter, model: cfg.model, ...(cfg.effort && { effort: cfg.effort }) };
+  const defaults = { adapter: cfg.adapter, class: cfg.class };
   return stringify({ ...flow, budget_usd: cfg.budgetUsd, defaults });
 }

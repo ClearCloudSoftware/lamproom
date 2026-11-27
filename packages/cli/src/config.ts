@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { allowsAnyShell } from '@lamproom/adapters';
 import { DEFAULT_DENY_COMMANDS } from '@lamproom/core';
 import type { RunSpec } from '@lamproom/core';
+import type { Effort, Harness, ModelClass, Profile } from './settings.ts';
 
 export type Adapter = 'claude-code' | 'opencode';
 
@@ -36,9 +37,16 @@ export type LoadResult = { ok: true; config: RunConfig } | { ok: false; errors: 
 /**
  * The app's rules for OpenCode's models (`models.ts` builds them from the approved list): `problem` says why a model
  * may not run, `warning` what a step on it should be warned of (a free model's privacy, a local one's small window).
- * Absent, as in tests, no model is checked.
+ * `resolveClass`: the model and effort a class gives on a CLI under the profile in use, or why it gives none.
+ * `efforts`: the levels `model` takes on `cli`; undefined when the list is unknown or the model is not in it.
+ * Absent, as in tests, no model is checked and no class is resolved.
  */
-export interface ModelRules { problem(model: string): string | undefined; warning(model: string): string | undefined }
+export interface ModelRules {
+  problem(model: string): string | undefined;
+  warning(model: string): string | undefined;
+  resolveClass?(cls: ModelClass, cli: Harness): { model: string; effort?: Effort; profile: Profile } | { error: string };
+  efforts?(cli: Harness, model: string): Effort[] | undefined;
+}
 
 export const RunSchema = z.strictObject({
   adapter: z.enum(['claude-code', 'opencode']),

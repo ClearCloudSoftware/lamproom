@@ -7,17 +7,20 @@
  * See docs/Lamproom/Agent Providers/Claude Code Adapter.md.
  */
 import { EventEmitter, on } from 'node:events';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { query } from '@anthropic-ai/claude-agent-sdk';
-import type { Options, SDKMessage, SpawnOptions } from '@anthropic-ai/claude-agent-sdk';
-import { ZERO_USAGE } from '@lamproom/core';
-import type { AgentProvider, AgentRun, Capability, NormalizedEvent, RunResult, RunSpec } from '@lamproom/core';
+import type { Options, Query, SDKMessage, SDKUserMessage, SpawnOptions } from '@anthropic-ai/claude-agent-sdk';
+import { effortsFrom, ZERO_USAGE } from '@lamproom/core';
+import type { AgentProvider, AgentRun, Capability, NormalizedEvent, ProviderModel, RunResult, RunSpec } from '@lamproom/core';
 import { hostExecHost } from '../../exec/host.ts';
 import { createNormalizer } from './normalize.ts';
-import { buildQuery } from './options.ts';
+import { buildQuery, cliEnv } from './options.ts';
 import { KILL_GRACE_MS, terminate } from '../../exec/terminate.ts';
 
 export type QueryFn = (p: { prompt: string; options: Options }) => AsyncIterable<SDKMessage>;
+/** query() as listModels() uses it: only the model list is read, so no prompt is ever sent. */
+export type ListQueryFn = (p: { prompt: AsyncIterable<SDKUserMessage>; options: Options }) => Pick<Query, 'supportedModels' | 'close'>;
 
 export class ClaudeCodeProvider implements AgentProvider {
   readonly id = 'claude-code' as const;
@@ -38,19 +41,40 @@ export class ClaudeCodeProvider implements AgentProvider {
   private readonly claudePath: string;
   private readonly env: NodeJS.ProcessEnv;
   private readonly queryFn: QueryFn;
+  private readonly listQuery: ListQueryFn;
 
   private readonly killGraceMs: number;
 
-  constructor(opts: { claudePath?: string; env?: NodeJS.ProcessEnv; query?: QueryFn; killGraceMs?: number } = {}) {
+  constructor(opts: { claudePath?: string; env?: NodeJS.ProcessEnv; query?: QueryFn; listQuery?: ListQueryFn; killGraceMs?: number } = {}) {
     this.killGraceMs = opts.killGraceMs ?? KILL_GRACE_MS;
     this.claudePath = opts.claudePath ?? 'claude';
     this.env = opts.env ?? process.env;
     this.queryFn = opts.query ?? query;
+    this.listQuery = opts.listQuery ?? query;
   }
 
   /** v1: logical ids are Claude aliases (Capability Library Decisions D20). */
   resolveModel(logical: string): string {
     return logical;
+  }
+
+  async listModels(): Promise<ProviderModel[]> {
+    // An input stream that never yields keeps the CLI waiting for a prompt, so nothing is sent or billed.
+    const idle = (async function* (): AsyncGenerator<SDKUserMessage> {
+      await new Promise(() => {});
+    })();
+    // As a launch starts it: its own login and no settings files (hooks, MCP servers, plugins), outside the app's folder.
+    const q = this.listQuery({ prompt: idle, options: { pathToClaudeCodeExecutable: this.claudePath, env: cliEnv(this.env), settingSources: [], cwd: tmpdir() } });
+    try {
+      return (await q.supportedModels()).map((m) => ({
+        id: m.value,
+        name: m.displayName,
+        ...(m.resolvedModel && m.resolvedModel !== m.value && { resolvesTo: m.resolvedModel }),
+        efforts: m.supportsEffort === false ? [] : effortsFrom(m.supportedEffortLevels ?? []),
+      }));
+    } finally {
+      q.close();
+    }
   }
 
   launch(spec: RunSpec): AgentRun {

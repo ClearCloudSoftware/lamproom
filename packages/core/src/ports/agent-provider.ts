@@ -29,6 +29,24 @@ export type ProviderId = 'claude-code' | 'codex' | 'opencode' | 'replay' | (stri
 
 export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
+/** Every effort level, lowest first. */
+export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const satisfies readonly Effort[];
+
+/** Names that are Effort values, deduplicated, in EFFORTS order; anything else ('none', 'minimal') dropped. */
+export function effortsFrom(names: Iterable<string>): Effort[] {
+  const given = new Set(names);
+  return EFFORTS.filter((e) => given.has(e));
+}
+
+/** One model a CLI can run, and the effort levels it takes (none: `efforts` is empty). */
+export interface ProviderModel {
+  id: string;
+  name: string;
+  /** The pinned id an alias stands for; absent when `id` is already one. */
+  resolvesTo?: string;
+  efforts: Effort[];
+}
+
 /**
  * What a provider can do. The engine and flow editor query this BEFORE using a
  * knob, and degrade gracefully when it is absent (capability negotiation):
@@ -218,6 +236,8 @@ export interface AgentProvider {
   readonly capabilities: ReadonlySet<Capability>;
   /** Map a logical model id to this provider's native id, e.g. 'reasoning-high' -> 'opus' | 'o3'. */
   resolveModel(logical: string): string;
+  /** The models this CLI can run on this machine, with the efforts each takes. Starts the CLI; sends no prompt. */
+  listModels(): Promise<ProviderModel[]>;
   /** Launch one attempt. Non-blocking: returns a handle whose promises settle as the run proceeds. */
   launch(spec: RunSpec): AgentRun;
 }

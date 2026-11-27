@@ -9,6 +9,7 @@ import { ANALYST_TASK, analysisView, startAnalysis } from '../src/analysis-run.t
 import type { startRun } from '../src/flow-start.ts';
 import { createProject, type ProjectView, readProjects } from '../src/projects.ts';
 import { loadFlow } from '../src/flow-config.ts';
+import { modelRules } from '../src/models.ts';
 import { internalFlowText } from '../src/internal-steps.ts';
 import { APP_DEFAULTS } from '../src/settings.ts';
 
@@ -76,7 +77,7 @@ function analystRun(runsDir: string, name: string, state: { status: string; cost
   const repo = temp();
   writeFileSync(join(repo, 'task.md'), 'Analyse this.\n');
   writeFileSync(join(repo, 'repo-analyst.yaml'), internalFlowText('repo-analyst', APP_DEFAULTS.internal['repo-analyst']));
-  const loaded = loadFlow('repo-analyst.yaml', repo, { folder: repo, task: 'task.md' });
+  const loaded = loadFlow('repo-analyst.yaml', repo, { folder: repo, task: 'task.md' }, undefined, modelRules(temp()));
   assert.ok(loaded.ok, loaded.ok ? '' : loaded.errors.join('\n'));
   const dir = join(runsDir, name);
   const artifactsDir = join(repo, '.lamproom', name);
@@ -126,7 +127,7 @@ test('starting an analysis: the flow is written with the app’s settings, lr-ru
   assert.deepEqual([runsDir, dataDir], [runs, data]);
   assert.deepEqual(input, { flow: 'repo-analyst', folder: repo, task: ANALYST_TASK, allowDirty: true });
   writeFileSync(join(repo, 'task.md'), ANALYST_TASK);
-  const loaded = loadFlow(join(flowsDir, 'repo-analyst.yaml'), repo, { folder: repo, task: 'task.md' });
+  const loaded = loadFlow(join(flowsDir, 'repo-analyst.yaml'), repo, { folder: repo, task: 'task.md' }, undefined, modelRules(data));
   assert.ok(loaded.ok, loaded.ok ? '' : loaded.errors.join('\n'));
   assert.equal(loaded.config.budgetUsd, APP_DEFAULTS.internal['repo-analyst'].budgetUsd);
   assert.deepEqual(readProjects(data)[0].analysis, { run: '2026-11-13T10-00-00-repo-analyst' });

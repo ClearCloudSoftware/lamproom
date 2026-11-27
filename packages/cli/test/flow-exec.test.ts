@@ -187,6 +187,7 @@ function agent(script: Script = {}) {
     id: 'fake',
     capabilities: new Set(),
     resolveModel: (m) => m,
+    listModels: async () => [],
     launch: (spec) => {
       specs.push(spec);
       for (const o of spec.prompt.outputs) if (script.write?.includes(o.type)) writeFileSync(o.path, 'done');
@@ -339,6 +340,7 @@ test('an agent run stopped for a reason ends, and logs, with that reason', async
     id: 'fake',
     capabilities: new Set(),
     resolveModel: (m) => m,
+    listModels: async () => [],
     launch: () => ({
       sessionId: Promise.resolve('s-1'),
       pid: Promise.resolve(-1),
@@ -452,6 +454,7 @@ test('kill() of an agent with no host pid stops it through its provider', async 
     id: 'boxed',
     capabilities: new Set(),
     resolveModel: (m) => m,
+    listModels: async () => [],
     launch: () => {
       const result = new Promise<RunResult>((r) => (release = () => r({ usage: ZERO_USAGE, exitCode: 1, error: 'stopped' })));
       async function* events(): AsyncGenerator<NormalizedEvent> {

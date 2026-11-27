@@ -9,6 +9,7 @@ import {
   fromFlowValues,
   fromValues,
   layout,
+  modelText,
   nextCondition,
   remove,
   renameStep,
@@ -146,4 +147,19 @@ test('a check line points at its step, its route, or the flow', () => {
     ].map(target),
     [{ step: 'review' }, { step: 'tests' }, { edge: 3 }, { flow: true }, { flow: true }, { flow: true }],
   );
+});
+
+test('class: what picks the model is shown, a model typed in removes the class on its level, and the class is kept otherwise', () => {
+  const d: Draft = { defaults: { adapter: 'claude-code', class: 'deep' }, steps: { a: { prompt: 'a.md' }, b: { prompt: 'b.md', class: 'fast' }, c: { prompt: 'c.md', model: 'opus' } } };
+  const { a, b, c } = stepsOf(d);
+  assert.deepEqual([modelText(d, a), modelText(d, b), modelText(d, c), modelText({}, {})], ['deep class', 'fast class', 'opus', 'standard class']);
+  assert.equal(modelText({ defaults: { model: 'sonnet' } }, b), 'fast class'); // a step's class beats a model in defaults
+  // round trips keep the class
+  assert.deepEqual(fromValues(toValues('b', b), b), b);
+  assert.deepEqual(fromFlowValues(toFlowValues(d), d), d);
+  // a model set at a level drops that level's class, so the designer never writes both
+  assert.deepEqual(fromValues({ ...toValues('b', b), model: 'opus' }, b), { prompt: 'b.md', model: 'opus' });
+  assert.deepEqual(fromFlowValues({ ...toFlowValues(d), model: 'sonnet' }, d).defaults, { adapter: 'claude-code', model: 'sonnet' });
+  // a shell step takes no class
+  assert.deepEqual(fromValues({ ...toValues('b', b), kind: 'shell', shell: 'true' }, b), { shell: 'true' });
 });

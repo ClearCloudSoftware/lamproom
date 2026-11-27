@@ -21,7 +21,7 @@ const setup = (over: Partial<Setup> = {}): Setup => ({
   flows: [],
   unreadableFlows: [],
   localModelApproved: false,
-  agents: { 'claude-code': { path: null, model: null, effort: null }, opencode: { path: null, model: null, effort: null } },
+  agents: { 'claude-code': { path: null }, opencode: { path: null } },
   dataDir: '/data',
   flowsDir: '/flows',
   ...over,

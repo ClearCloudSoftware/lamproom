@@ -18,6 +18,12 @@ export interface QueryBase {
   spawnClaudeCodeProcess: (o: SpawnOptions) => SpawnedProcess;
 }
 
+/** The CLI's environment without an API key: runs (and listings) use the installed CLI's own login, so an inherited key never switches billing. */
+export function cliEnv(inherited: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const { ANTHROPIC_API_KEY: _key, ANTHROPIC_AUTH_TOKEN: _token, ...env } = inherited;
+  return env;
+}
+
 /** `spec.model` must already be resolved by the caller. */
 export function buildQuery(spec: RunSpec, base: QueryBase): { prompt: string; options: Options } {
   const { invocation, ...parts } = spec.prompt;
@@ -25,8 +31,7 @@ export function buildQuery(spec: RunSpec, base: QueryBase): { prompt: string; op
   // The CLI only treats a leading `/` as a slash command, so the skill goes first.
   const prompt = invocation ? `${invocation}\n\n${rest}` : rest;
 
-  // Runs use the installed CLI's own login: an inherited API key would silently switch billing.
-  const { ANTHROPIC_API_KEY: _key, ANTHROPIC_AUTH_TOKEN: _token, ...env } = base.env;
+  const env = cliEnv(base.env);
 
   const packs = spec.capabilities ?? [];
   const append = [

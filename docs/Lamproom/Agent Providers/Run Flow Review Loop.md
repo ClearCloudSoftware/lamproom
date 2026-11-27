@@ -19,7 +19,7 @@ How to have a reviewer agent send the work back to the implementer agent when it
 ```yaml
 budget_usd: 6      # the most the whole loop may spend, every round included; 0 for no ceiling
 entry: implement   # every step has an edge into it, so name the first
-defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 30 } }
+defaults: { adapter: claude-code, class: standard, limits: { max_turns: 30 } }   # the profile in use picks the model
 steps:
   implement: { prompt: prompts/implement.md, produces: [notes], max_attempts: 3 }
   review:

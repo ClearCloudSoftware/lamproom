@@ -998,7 +998,7 @@ async function drive(d: Drive, deps: RunDeps): Promise<number> {
     // In a box, an agent's outputs are newest there until it ends: no other step's push may overwrite them.
     const mine = step.kind === 'ai' && d.box ? produces.map((type) => artifactPath(d.artifactsDir, type)) : [];
     for (const f of mine) producing.add(f);
-    show(`-- ${cmd.step} attempt ${cmd.attempt} (${step.kind === 'shell' ? 'shell' : `${step.run.adapter} ${step.run.spec.model}`})`);
+    show(`-- ${cmd.step} attempt ${cmd.attempt} (${step.kind === 'shell' ? 'shell' : `${step.run.adapter} ${step.run.spec.model}${step.resolved ? ` (${step.resolved.class} in ${step.resolved.profile})` : ''}`})`);
     mkdirSync(d.runDir, { recursive: true });
     mkdirSync(d.artifactsDir, { recursive: true });
     // timeout_minutes counts the run's own time: the clock stops while one of its questions waits for a person.

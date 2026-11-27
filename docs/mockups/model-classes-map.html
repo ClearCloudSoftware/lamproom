@@ -1,0 +1,312 @@
+<meta charset="utf-8">
+<title>Model classes map</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74;  --run-soft:#0E6E7414; --run-mid:#0E6E7429;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box;border-radius:0}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,select{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.lu{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+
+.mtop{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;padding:11px 24px;background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-weight:600}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.sp{flex:1}
+.page{max-width:1180px;margin:0 auto;padding:26px 24px 110px;display:grid;gap:22px}
+h1{font-size:20px;font-weight:600;margin:0}
+.lede{margin:-12px 0 0;font-family:var(--sans);font-size:14px;color:var(--ink-2);max-width:78ch}
+.lede b{font-weight:600;color:var(--run)}
+.ctag{display:inline-block;padding:0 6px;border:1px solid var(--ink);font-weight:600;font-size:11.5px}
+
+/* ── the table: class rows × profile columns ─────────────────────── */
+.map{display:grid;grid-template-columns:190px repeat(3,minmax(0,1fr));border:1px solid var(--line-2);border-top:0;background:var(--surface)}
+.corner{background:var(--surface-3);border-bottom:1px solid var(--line-2);padding:10px 12px;display:flex;align-items:flex-end}
+.phead{background:var(--surface-3);border-bottom:1px solid var(--line-2);border-left:1px solid var(--line-2);padding:9px 12px;display:grid;gap:3px;
+  transition:background var(--t),color var(--t)}
+.phead:hover{background:var(--surface-2)}
+.phead .pn{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+.radio{width:13px;height:13px;border:1.5px solid var(--ink-3);display:inline-block;position:relative}
+.phead .pd{font-family:var(--sans);font-size:11.5px;color:var(--ink-3)}
+.phead.on{background:var(--run);color:#fff}
+.phead.on .pd{color:#ffffffcc}
+.phead.on .radio{border-color:#fff}
+.phead.on .radio::after{content:"";position:absolute;inset:2.5px;background:#fff}
+.phead .use{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-left:auto;opacity:0}
+.phead.on .use{opacity:1}
+.rhead{padding:12px;border-bottom:1px solid var(--line);display:grid;gap:5px;align-content:start;transition:background var(--t)}
+.rhead .ctag{font-size:13px;justify-self:start}
+.rhead p{margin:0;font-family:var(--sans);font-size:11.5px;color:var(--ink-3);line-height:1.35}
+.mcell{border-left:1px solid var(--line);border-bottom:1px solid var(--line);display:grid;transition:background var(--t),opacity var(--t)}
+.mcell.off{opacity:.45}
+.mcell.off:hover{opacity:.8}
+.mcell.colon{background:var(--run-soft)}
+.mline{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px;padding:12px;transition:background var(--t),box-shadow var(--t)}
+.mline:hover{background:#00000008}
+.mline .mdl{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mline .mdl small{color:var(--ink-3)}
+.mline.editing{box-shadow:inset 0 0 0 2px var(--run)}
+.mline.unset .mdl{color:var(--fail)}
+/* ── agent CLI selector: one tab per CLI, scales to many ───────────── */
+.clibar{display:flex;align-items:flex-end;gap:0;border-bottom:2px solid var(--ink);overflow-x:auto}
+.clibar .lbl{padding:0 14px 9px 0;white-space:nowrap}
+.clitab{display:flex;align-items:center;gap:7px;padding:8px 14px;margin-right:2px;background:var(--surface-3);border:1px solid var(--line-2);border-bottom:0;
+  white-space:nowrap;transition:background var(--t),color var(--t)}
+.clitab:hover{background:var(--surface-2)}
+.clitab[aria-selected="true"]{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600}
+.clitab .lu{width:13px;height:13px}
+.clitab .bad{font-size:10.5px;font-weight:600;color:#fff;background:var(--fail);padding:0 5px}
+.clitab .ed{width:6px;height:6px;background:currentColor}
+/* effort meter: five cells, filled to the level; hollow when the model picks */
+.meter{display:inline-flex;gap:2px;align-items:center}
+.meter i{width:7px;height:10px;background:var(--pend);box-shadow:inset 0 0 0 1px var(--line-2)}
+.meter i.f{background:var(--ink);box-shadow:none}
+.meter em{font-style:normal;font-size:10.5px;color:var(--ink-3);margin-left:5px;min-width:40px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;font-family:var(--sans);font-size:12px;color:var(--ink-3)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+
+select.sel{height:30px;padding:0 26px 0 8px;background:var(--surface);border:1px solid var(--line-2);font-size:12.5px;cursor:pointer;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%237A7880' stroke-width='1.4'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center}
+select.sel:hover{border-color:var(--ink-3)}
+select.sel:disabled{color:var(--ink-3);background-color:var(--surface-2);cursor:not-allowed}
+/* ── cell editor ───────────────────────────────────────────────────── */
+.editor{display:grid;grid-template-columns:auto minmax(0,1fr) 170px auto;gap:12px;align-items:end;padding:12px 14px;background:var(--surface);border:1px solid var(--run);margin-top:10px}
+.editor .where{font-weight:600}
+.editor label{display:grid;gap:4px}
+.editor .note{grid-column:1/-1;font-family:var(--sans);font-size:12px;color:var(--ink-3);margin:0}
+.act{border:1px solid var(--line-2);padding:5px 12px;font-size:12px;transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover{background:var(--surface-2);border-color:var(--ink-3)}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act:disabled{opacity:.45;cursor:not-allowed}
+.act.primary:hover{background:var(--run);color:#fff}
+
+.savebar{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;align-items:center;gap:12px;padding:10px 24px;background:var(--surface);
+  border-top:2px solid var(--ink);transform:translateY(100%);visibility:hidden;transition:transform var(--t),visibility var(--t)}
+.savebar.show{transform:none;visibility:visible}
+.savebar .msg{font-family:var(--sans)}
+
+@media (max-width:900px){
+  .map{grid-template-columns:120px repeat(3,minmax(150px,1fr));overflow-x:auto}
+  .editor{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<header class="mtop">
+  <div class="brand">lamproom<em>/</em><span>settings</span><em>/</em><span>agents</span><em>/</em><span>model classes</span></div>
+  <span class="sp"></span>
+  <span class="lbl">app-wide · every project</span>
+</header>
+
+<main class="page">
+  <h1>Model classes</h1>
+
+  <p class="lede">Pick an agent CLI, then each class turns into one of its models and an effort level. Only the profile marked <b>in use</b> applies; click a profile's name to switch. Click any line to change it.</p>
+  <div>
+      <div class="clibar" role="tablist" aria-label="Agent CLI" id="clibar"></div>
+      <div class="map" id="map"></div>
+      <div class="legend" id="legend"></div>
+      <div id="editor"></div>
+  </div>
+</main>
+
+<div class="savebar" id="savebar">
+  <span class="msg" id="savemsg"></span><span class="sp"></span>
+  <button class="act" id="discard">Discard</button>
+  <button class="act primary" id="save">Save changes</button>
+</div>
+
+<script>
+const LU = {
+  terminal:'<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+};
+const lu = (n) => `<svg class="lu" viewBox="0 0 24 24" aria-hidden="true">${LU[n]}</svg>`;
+
+const LEVELS = ['low','medium','high','xhigh','max'];
+const CLIS = { cc:'claude-code', oc:'opencode' };
+/* Claude: all five levels. OpenCode: effort only where the model lists variants. No "model default": a model with levels needs one picked. */
+const MODELS = {
+  cc:[
+    { id:'opus',   name:'Opus 5.5',   follows:true },
+    { id:'sonnet', name:'Sonnet 5.5', follows:true },
+    { id:'haiku',  name:'Haiku 5.5',  follows:true },
+    { id:'claude-fable-5-2', name:'Fable 5.2' },
+  ],
+  oc:[
+    { id:'openrouter/qwen/qwen3-coder', name:'qwen3-coder', variants:[] },
+    { id:'openrouter/deepseek/deepseek-v4.1-flash', name:'deepseek-v4.1-flash', variants:['low','high','max'] }  /* as OpenCode 1.19.3 lists it: no medium */,
+    { id:'ollama/qwen3-coder:30b', name:'qwen3-coder:30b (local)', variants:[] },
+    { id:'ollama/gemma4:26b-64k', name:'gemma4:26b (local)', variants:[] },
+  ],
+};
+const findModel = (cli, id) => MODELS[cli].find(m => m.id === id);
+const levelsOf = (cli, m) => cli === 'cc' ? LEVELS : m.variants;
+
+const CLASSES = [
+  { id:'deep',     d:'Thinking model, high effort. Implementing, planning, debugging.' },
+  { id:'standard', d:'Reviews, docs, routine edits.' },
+  { id:'fast',     d:'Triage, summaries, imports.' },
+];
+const PROFILES = [
+  { id:'quality',  d:'Best models. Costs most.' },
+  { id:'balanced', d:'Strong where it matters.' },
+  { id:'budget',   d:'Small and local models.' },
+];
+const c = (cc, ccE, oc, ocE) => ({ cc:{ model:cc, effort:ccE }, oc:{ model:oc, effort:ocE } });
+const SEED = {
+  quality: { deep:c('claude-fable-5-2','high','openrouter/deepseek/deepseek-v4.1-flash','high'),
+             standard:c('opus','high','openrouter/qwen/qwen3-coder',null),
+             fast:c('sonnet','medium','openrouter/deepseek/deepseek-v4.1-flash','low') },
+  balanced:{ deep:c('opus','high','openrouter/qwen/qwen3-coder',null),
+             standard:c('sonnet','medium','openrouter/deepseek/deepseek-v4.1-flash','high'),
+             fast:c('haiku','low','openrouter/deepseek/deepseek-v4.1-flash','low') },
+  budget:  { deep:c('sonnet','high',null,null),
+             standard:c('haiku','medium','ollama/qwen3-coder:30b',null),
+             fast:c('haiku','low','ollama/gemma4:26b-64k',null) },
+};
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const S = { table:clone(SEED), saved:clone(SEED), inUse:'balanced', savedInUse:'balanced',
+            cli:'cc', edit:null };
+
+function meter(cli, m, e) {
+  if (!m) return '';
+  if (!levelsOf(cli, m).length) return `<span class="meter"><em>—</em></span>`;
+  const has = levelsOf(cli, m), n = e ? has.indexOf(e) + 1 : 0;
+  return `<span class="meter">${has.map((_, i) => `<i class="${i < n ? 'f' : ''}"></i>`).join('')}<em>${e || 'pick a level'}</em></span>`;
+}
+/* A cell is incomplete when its model takes effort and none is picked; an empty cell is allowed (the run is refused). */
+const noEffort = (cli, cell) => { const m = cell.model && findModel(cli, cell.model); return !!m && levelsOf(cli, m).length > 0 && !cell.effort; };
+const mName = (cli, m) => cli === 'cc' && m.follows ? `${m.id} <small>→ ${m.name}</small>` : cli === 'cc' ? m.id : m.name;
+
+/* ── CLI selector ──────────────────────────────────────────────────── */
+const each = (fn) => { for (const p of PROFILES) for (const k of CLASSES) fn(p.id, k.id); };
+function renderCliBar() {
+  document.getElementById('clibar').innerHTML = `<span class="lbl">Agent CLI</span>` + Object.entries(CLIS).map(([ci, name]) => {
+    let unset = 0, edited = false;
+    each((p, k) => {
+      if (!S.table[p][k][ci].model || noEffort(ci, S.table[p][k][ci])) unset++;
+      if (JSON.stringify(S.table[p][k][ci]) !== JSON.stringify(S.saved[p][k][ci])) edited = true;
+    });
+    return `<button class="clitab" role="tab" data-cli="${ci}" aria-selected="${ci === S.cli}" title="${unset ? `${unset} cell${unset > 1 ? 's' : ''} with no model or no effort` : ''}">
+      ${lu('terminal')}${name}${unset ? `<span class="bad">${unset} not set</span>` : ''}${edited ? '<span class="ed" aria-label="unsaved"></span>' : ''}</button>`;
+  }).join('');
+}
+
+/* ── legend: what effort means on the selected CLI ──────────────────── */
+const box = (n, f, cls) => `<span class="meter">${Array.from({ length:n }, (_, i) => `<i class="${i < f ? cls : ''}"></i>`).join('')}</span>`;
+function renderLegend() {
+  document.getElementById('legend').innerHTML = S.cli === 'cc'
+    ? `<span>${box(5, 3, 'f')} Claude Code: five effort levels on every model, low · medium · high · xhigh · max</span>
+       <span>red: no model, or no effort picked. Every model with levels needs one</span>`
+    : `<span>${box(3, 3, 'f')} OpenCode: effort comes from the model's own variants, so the meter shows only the levels that model has</span>
+       <span>— the model has no effort variants</span>`;
+}
+
+/* ── table ───────────────────────────────────────────────────────── */
+function renderMap() {
+  let html = `<div class="corner"><span class="lbl">class ↓ · profile →</span></div>` +
+    PROFILES.map(p => `<button class="phead ${p.id === S.inUse ? 'on' : ''}" data-prof="${p.id}" aria-pressed="${p.id === S.inUse}">
+      <span class="pn"><span class="radio"></span>${p.id}<span class="use">in use</span></span><span class="pd">${p.d}</span></button>`).join('');
+  for (const k of CLASSES) {
+    html += `<div class="rhead"><span class="ctag">${k.id}</span><p>${k.d}</p></div>`;
+    for (const p of PROFILES) {
+      const on = p.id === S.inUse;
+      html += `<div class="mcell ${on ? 'colon' : 'off'}">` +
+        [S.cli].map(ci => {
+          const cell = S.table[p.id][k.id][ci], m = cell.model && findModel(ci, cell.model);
+          const editing = S.edit && S.edit.p === p.id && S.edit.k === k.id && S.edit.cli === ci;
+          return `<button class="mline ${editing ? 'editing' : ''} ${!m || noEffort(ci, cell) ? 'unset' : ''}" data-edit="${p.id}|${k.id}|${ci}" aria-label="${p.id} ${k.id} ${CLIS[ci]}">
+            <span class="mdl">${m ? mName(ci, m) : 'nothing set'}</span>${meter(ci, m, cell.effort)}</button>`;
+        }).join('') + `</div>`;
+    }
+  }
+  document.getElementById('map').innerHTML = html;
+}
+
+/* ── cell editor ───────────────────────────────────────────────────── */
+function renderEditor() {
+  const box = document.getElementById('editor');
+  if (!S.edit) { box.innerHTML = ''; return; }
+  const { p, k, cli } = S.edit, cell = S.table[p][k][cli], m = cell.model && findModel(cli, cell.model);
+  const lv = m ? levelsOf(cli, m) : [];
+  const models = (cli === 'oc' ? [`<option value="">— nothing set —</option>`] : [])
+    .concat(MODELS[cli].map(x => `<option value="${x.id}" ${x.id === cell.model ? 'selected' : ''}>${x.id}${x.follows ? ` (follows the latest: ${x.name} today)` : ''}</option>`)).join('');
+  const efforts = !lv.length ? `<option>no effort setting</option>`
+    : `<option value="" disabled ${!cell.effort ? 'selected' : ''}>pick a level</option>` + lv.map(l => `<option value="${l}" ${l === cell.effort ? 'selected' : ''}>${l}</option>`).join('');
+  const note = p === S.inUse
+    ? `Anything that asks for ${k} on ${CLIS[cli]} gets this, from the next run on.`
+    : `This applies only while ${p} is the profile in use.`;
+  box.innerHTML = `<div class="editor">
+    <span class="where">${p} › ${k} › ${CLIS[cli]}</span>
+    <label><span class="lbl">Model</span><select class="sel" data-f="model" style="width:100%">${models}</select></label>
+    <label><span class="lbl">Effort</span><select class="sel" data-f="effort" style="width:100%" ${!lv.length ? 'disabled' : ''}>${efforts}</select></label>
+    <button class="act" id="close">Done</button>
+    <p class="note">${note}</p>
+  </div>`;
+}
+
+function renderSave() {
+  let n = 0;
+  for (const p of PROFILES) for (const k of CLASSES) for (const ci of Object.keys(CLIS))
+    if (JSON.stringify(S.table[p.id][k.id][ci]) !== JSON.stringify(S.saved[p.id][k.id][ci])) n++;
+  if (S.inUse !== S.savedInUse) n++;
+  let missing = 0;
+  for (const p of PROFILES) for (const k of CLASSES) for (const ci of Object.keys(CLIS)) if (noEffort(ci, S.table[p.id][k.id][ci])) missing++;
+  document.getElementById('savebar').classList.toggle('show', n > 0);
+  document.getElementById('save').disabled = missing > 0;
+  document.getElementById('savemsg').innerHTML = missing
+    ? `<b>${missing}</b> cell${missing > 1 ? 's need' : ' needs'} an effort level before you can save.`
+    : `<b>${n}</b> unsaved change${n > 1 ? 's' : ''}. Runs already going keep the models they started with.`;
+}
+function render() { renderCliBar(); renderLegend(); renderMap(); renderEditor(); renderSave(); }
+
+document.addEventListener('click', e => {
+  const cb = e.target.closest('[data-cli]'); if (cb) { S.cli = cb.dataset.cli; S.edit = null; render(); return; }
+  const ph = e.target.closest('[data-prof]'); if (ph) { S.inUse = ph.dataset.prof; render(); return; }
+  const ed = e.target.closest('[data-edit]'); if (ed) { const [p, kk, cli] = ed.dataset.edit.split('|'); S.edit = { p, k:kk, cli }; render(); return; }
+  if (e.target.closest('#close')) { S.edit = null; render(); return; }
+  if (e.target.closest('#save')) { S.saved = clone(S.table); S.savedInUse = S.inUse; render(); return; }
+  if (e.target.closest('#discard')) { S.table = clone(S.saved); S.inUse = S.savedInUse; render(); }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.f && S.edit) {
+    const { p, k, cli } = S.edit, cell = S.table[p][k][cli];
+    if (t.dataset.f === 'model') {
+      cell.model = t.value || null;
+      const m = cell.model && findModel(cli, cell.model);
+      if (!m || !levelsOf(cli, m).includes(cell.effort)) cell.effort = null;
+    } else cell.effort = t.value || null;
+    render();
+  }
+});
+document.addEventListener('keydown', e => {
+  if (e.target.closest('select')) return;
+  const i = PROFILES.findIndex(p => p.id === S.inUse);
+  if (e.key === '[' || e.key === ']') { S.inUse = PROFILES[(i + (e.key === ']' ? 1 : 2)) % 3].id; render(); }
+  if (e.key === 'Escape' && S.edit) { S.edit = null; render(); }
+});
+render();
+</script>

@@ -12,6 +12,8 @@ export interface Edge { from: string; to: string; condition?: Condition }
 /** lr-run-agent's keys; the ones the designer has no field for (permissions, guards, plugins, skills) are kept as read. */
 export interface Launch {
   adapter?: string;
+  /** deep, standard or fast: the profile in use picks the model. Set in YAML; the designer shows it and keeps it. */
+  class?: string;
   model?: string;
   effort?: string;
   prompt?: string;
@@ -155,6 +157,12 @@ export function upstream(d: Draft, id: string): Set<string> {
 /** A step's launch keys over the flow's `defaults`: a step's own key replaces the default whole. */
 export const effective = (d: Draft, s: Step): Launch => ({ ...d.defaults, ...s });
 
+/** What picks the step's model, as lr-run-flow reads it: the step's own model or class beats either in defaults; neither anywhere asks for standard. */
+export function modelText(d: Draft, s: Step): string {
+  const level = s.model !== undefined || s.class !== undefined ? s : (d.defaults ?? {});
+  return level.model !== undefined ? String(level.model) : `${String(level.class ?? 'standard')} class`;
+}
+
 const text = (v: unknown) => (v === undefined || v === null ? '' : String(v));
 const str = (v: string) => (v === '' ? undefined : v);
 const num = (v: string) => (v.trim() === '' ? undefined : Number(v));
@@ -209,7 +217,7 @@ export function toValues(id: string, s: Step): StepValues {
 }
 
 /** lr-run-agent's keys and `write_roots`: a shell step takes none, so a step that becomes one drops them, as lr-run-flow would refuse them. */
-const AGENT_ONLY = ['adapter', 'model', 'effort', 'prompt', 'system_prompt', 'skill', 'skills', 'plugins', 'permissions', 'guards', 'limits', 'write_roots'];
+const AGENT_ONLY = ['adapter', 'class', 'model', 'effort', 'prompt', 'system_prompt', 'skill', 'skills', 'plugins', 'permissions', 'guards', 'limits', 'write_roots'];
 
 /** The step the form describes, over the step as read: keys the form has no field for stay, and an emptied field's key goes. */
 export function fromValues(v: StepValues, s: Step): Step {
@@ -227,6 +235,7 @@ export function fromValues(v: StepValues, s: Step): Step {
   return assign(s, {
     shell: undefined,
     adapter: str(v.adapter),
+    ...(str(v.model) && { class: undefined }), // a model and a class on one level is refused
     model: str(v.model),
     effort: str(v.effort),
     prompt: str(v.prompt),
@@ -259,7 +268,7 @@ const FLOW_KEYS = ['budget_usd', 'entry', 'defaults', 'steps', 'edges'];
 
 export function fromFlowValues(v: FlowValues, d: Draft): Draft {
   const l = d.defaults ?? {};
-  const defaults = assign(l, { adapter: str(v.adapter), model: str(v.model), effort: str(v.effort), limits: limitsOf(l.limits, v.run_budget, v.max_turns) });
+  const defaults = assign(l, { adapter: str(v.adapter), ...(str(v.model) && { class: undefined }), model: str(v.model), effort: str(v.effort), limits: limitsOf(l.limits, v.run_budget, v.max_turns) });
   const out = assign(d, { budget_usd: num(v.budget), entry: str(v.entry), defaults: Object.keys(defaults).length ? defaults : undefined });
   // A key the flow did not have (or had, until its field was emptied) goes where the reference writes it, not last.
   const keys = Object.keys(out).filter((k) => k in d);

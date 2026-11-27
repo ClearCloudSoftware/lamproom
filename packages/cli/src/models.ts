@@ -2,21 +2,34 @@
  * OpenCode's two model sources, OpenRouter (`openrouter.ts`) and Ollama on this machine (`ollama.ts`), as one set of
  * rules against the approved list (`AppSettings.opencodeModels`). Sources are told apart by their id's prefix.
  */
+import { offeredModels } from './agent-models.ts';
 import { readAppSettings } from './app-settings.ts';
 import type { ModelRules } from './config.ts';
 import { localModels, ollamaConfig, readOllamaList, refreshOllama, type OllamaState } from './ollama.ts';
 import { applySavedKey, readCatalogue, refreshCatalogue } from './openrouter.ts';
-import { isLocal, type LocalModels, modelProblem, modelWarning } from './settings.ts';
+import { cellProblem, isLocal, type LocalModels, modelProblem, modelWarning } from './settings.ts';
 
 /**
  * The approved list's rules as the checks take them, against the saved lists (never fetched here: checks are sync).
  * `ollama`: what Ollama said at run start; absent, the list saved last, and Ollama counts as answering.
  */
 export function modelRules(dataDir: string, ollama?: OllamaState): ModelRules {
-  const approved = readAppSettings(dataDir).opencodeModels;
+  const { opencodeModels: approved, modelClasses } = readAppSettings(dataDir);
   const catalogue = readCatalogue(dataDir);
   const local: LocalModels = ollama ? localModels(ollama) : { models: readOllamaList(dataDir) };
-  return { problem: (id) => modelProblem(id, approved, catalogue, local), warning: (id) => modelWarning(id, approved, catalogue, local) };
+  return {
+    problem: (id) => modelProblem(id, approved, catalogue, local),
+    warning: (id) => modelWarning(id, approved, catalogue, local),
+    // A saved cell is checked again: the CLI's list may have changed since it was saved.
+    resolveClass: (cls, cli) => {
+      const profile = modelClasses.inUse;
+      const cell = modelClasses.profiles[profile][cls][cli];
+      if (!cell) return { error: `no ${cli} model for ${cls} in ${profile}` };
+      const problem = cellProblem(cli, cell, offeredModels(dataDir, cli), approved.map((a) => a.id));
+      return problem ? { error: problem } : { model: cell.model, ...(cell.effort && { effort: cell.effort }), profile };
+    },
+    efforts: (cli, model) => offeredModels(dataDir, cli)?.find((m) => m.id === model)?.efforts,
+  };
 }
 
 /**

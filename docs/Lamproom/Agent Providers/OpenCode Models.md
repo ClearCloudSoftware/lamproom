@@ -45,8 +45,7 @@ A model that got cheaper still runs. Without a saved list (before the first fetc
 The model is then **picked, never typed**, from the approved models:
 
 - in the flow designer, on an OpenCode step and in the flow's defaults when their adapter is OpenCode;
-- on **Internal steps**, when a step runs on OpenCode (switching to OpenCode empties the model; **Save** stays off until one is picked);
-- on **Agents**, as OpenCode's default model, with *none: each step names one*.
+- on **Model classes** (`/settings/agents/classes`), in an OpenCode cell: the approved models OpenCode lists on this machine, plus Ollama's approved ones. Internal steps pick a class, not a model.
 
 Each list marks free models `· free` and local ones `· local`. A model the file or setting already names that is not approved stays shown, marked *(not approved)*, until it is changed. Under the picker, a free OpenRouter model shows the privacy line and a local one with a small window shows the context warning.
 
@@ -66,7 +65,7 @@ flowchart LR
 - `lr-run-agent` and `lr-run-flow` get Lamproom's data folder from `defaultDataDir()`: `LAMPROOM_DATA_DIR`, else `data/` in the app's folder, as the app has it. A run started from the runs page is handed the app's own data folder.
 - At start (`prepareRun`, `models.ts`), each source an approved model comes from is asked for its list: OpenRouter when its saved list is over an hour old, Ollama every time. A source nothing is approved from is not asked.
 - The flow designer's routes (`/api/flows`, `/api/flows/<name>`, `/api/flows/<name>/check`) pass the same rules, against the saved lists, so a flow with a refused model shows the error and **cannot be saved**, as with any other check error.
-- Saving OpenCode's default model or an internal step's OpenCode model refuses one that is not approved (`updateAppSettings`). Withdrawing an approval later is allowed; runs then refuse the model.
+- Saving a Model classes cell refuses an OpenCode model that is not approved, and one that is approved but that OpenCode's saved list lacks (`updateAppSettings`, `cellProblem`). Withdrawing an approval later is allowed; runs then refuse the model.
 - A resumed run (`lr-run-flow --resume`) keeps the models it was checked with when it started. Its local steps still get Ollama's provider, from the saved list.
 - Without a data folder, as in the package tests, no model is checked (`ModelRules` is optional on the loaders).
 

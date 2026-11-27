@@ -1,7 +1,7 @@
 /**
  * Runs once as the Next server starts: the knowledge assets' scheduler, which rebuilds a project's maps when its base
  * branch moves or once a day (`knowledge-run.ts`), and escalation, which keeps Slack connected and posts questions
- * that waited too long (`escalation.ts`). Node only; not while `next build` prerenders.
+ * that waited too long (`escalation.ts`); and each agent CLI's model list, saved in the background (`agent-models.ts`). Node only; not while `next build` prerenders.
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME !== 'nodejs' || process.env.NEXT_PHASE === 'phase-production-build') return;
@@ -10,4 +10,6 @@ export async function register() {
   startScheduler(dataDir(), runsDir());
   const { startEscalation } = await import('./packages/cli/src/escalation.ts');
   startEscalation(dataDir(), runsDir());
+  const { listAllAgentModels } = await import('./packages/cli/src/agent-models.ts');
+  void listAllAgentModels(dataDir()); // in the background: a CLI that is slow to answer must not delay the start
 }

@@ -116,6 +116,9 @@ export interface StepView {
   adapter?: string;
   model?: string;
   effort?: string;
+  /** The class the step asked for and the profile that picked its model, as the run started. */
+  class?: string;
+  profile?: string;
   command?: string;
   state: string;
   attempts: number;
@@ -196,7 +199,7 @@ export function readRun(runsDir: string, name: string): RunDetail | undefined {
     return {
       name: def.id,
       kind: step.kind,
-      ...(step.kind === 'ai' ? { adapter: step.run.adapter, model: step.run.spec.model, ...(step.run.spec.effort && { effort: step.run.spec.effort }) } : { command: step.command }),
+      ...(step.kind === 'ai' ? { adapter: step.run.adapter, model: step.run.spec.model, ...(step.run.spec.effort && { effort: step.run.spec.effort }), ...step.resolved } : { command: step.command }),
       state: at?.state ?? 'pending',
       attempts: at?.attempts ?? 0,
       maxAttempts: def.maxAttempts,

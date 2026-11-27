@@ -1,11 +1,11 @@
-import { test } from 'node:test';
+import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
+import type { ModelInfo, SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 import type { NormalizedEvent, RunSpec, Usage } from '@lamproom/core';
 import { ClaudeCodeProvider } from '../src/agent/claude/provider.ts';
-import type { QueryFn } from '../src/agent/claude/provider.ts';
+import type { ListQueryFn, QueryFn } from '../src/agent/claude/provider.ts';
 
 const lines = readFileSync(new URL('./fixtures/claude-hello.jsonl', import.meta.url), 'utf8')
   .trim()
@@ -145,4 +145,41 @@ test('stop() after the result does not relabel a finished run', async () => {
   const res = await run.result;
   assert.equal(res.exitCode, 0);
   assert.equal(res.error, undefined);
+});
+
+describe('listModels', () => {
+  const rows = [
+    { value: 'opus', displayName: 'Opus', description: '', resolvedModel: 'claude-opus-5-5', supportsEffort: true, supportedEffortLevels: ['max', 'low', 'medium', 'high', 'xhigh'] },
+    { value: 'haiku', displayName: 'Haiku', description: '', supportsEffort: false },
+    { value: 'claude-haiku-4-5', displayName: 'Haiku 4.5', description: '', resolvedModel: 'claude-haiku-4-5' },
+  ] as ModelInfo[];
+  const fakeList = (supportedModels: () => Promise<ModelInfo[]>) => {
+    const calls = { close: 0 };
+    const listQuery: ListQueryFn = () => ({ supportedModels, close: () => void calls.close++ });
+    return { calls, provider: new ClaudeCodeProvider({ listQuery }) };
+  };
+
+  test('maps the SDK rows and closes the query', async () => {
+    const { calls, provider } = fakeList(async () => rows);
+    assert.deepEqual(await provider.listModels(), [
+      { id: 'opus', name: 'Opus', resolvesTo: 'claude-opus-5-5', efforts: ['low', 'medium', 'high', 'xhigh', 'max'] },
+      { id: 'haiku', name: 'Haiku', efforts: [] },
+      { id: 'claude-haiku-4-5', name: 'Haiku 4.5', efforts: [] },
+    ]);
+    assert.equal(calls.close, 1);
+  });
+
+  test('starts the CLI as a launch does: its own login, no settings files, outside the app folder', async () => {
+    let options: Parameters<ListQueryFn>[0]['options'] | undefined;
+    const listQuery: ListQueryFn = (p) => ((options = p.options), { supportedModels: async () => rows, close: () => {} });
+    const env = { PATH: '/bin', ANTHROPIC_API_KEY: 'sk-x', ANTHROPIC_AUTH_TOKEN: 't' };
+    await new ClaudeCodeProvider({ listQuery, env, claudePath: '/x/claude' }).listModels();
+    assert.deepEqual([options?.env, options?.settingSources, options?.cwd, options?.pathToClaudeCodeExecutable], [{ PATH: '/bin' }, [], tmpdir(), '/x/claude']);
+  });
+
+  test('closes the query when supportedModels rejects', async () => {
+    const { calls, provider } = fakeList(() => Promise.reject(new Error('no login')));
+    await assert.rejects(provider.listModels(), /no login/);
+    assert.equal(calls.close, 1);
+  });
 });

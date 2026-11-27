@@ -12,6 +12,7 @@ import {
   flowDef,
   fromFlowValues,
   fromValues,
+  modelText,
   NAME,
   remove,
   reworked,
@@ -173,6 +174,8 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
   };
   const defaults = draft.defaults ?? {};
   const inherited = (v: unknown, none = 'not set') => (v === undefined ? none : `${String(v)} (flow default)`);
+  // Left empty, the model comes from the step's class, else the defaults' model or class, else standard.
+  const modelUnset = step.class !== undefined ? `${step.class} class` : inherited(defaults.model ?? (defaults.class === undefined ? undefined : `${defaults.class} class`), 'standard class');
   const supplied = upstream(draft, id);
   const attempts = reworked(draft).has(id) || step.max_attempts !== undefined;
   // ponytail: one group open at a time, all closed on a new selection (the panel remounts per step)
@@ -326,7 +329,7 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
               {group(
                 'agent',
                 'Agent',
-                (v) => [or(v.adapter, defaults.adapter) || 'no adapter', or(v.model, defaults.model) || 'default model', or(v.effort, defaults.effort)].filter(Boolean).join(' · '),
+                (v) => [or(v.adapter, defaults.adapter) || 'no adapter', modelText(draft, fromValues(v, step)), or(v.effort, defaults.effort)].filter(Boolean).join(' · '),
                 <>
                   <div className="in-f">
                     {select('adapter', 'Adapter', ADAPTERS, inherited(defaults.adapter))}
@@ -334,12 +337,12 @@ function StepPanel({ id, draft, problems }: { id: string; draft: Draft; problems
                       <form.Field name="model">
                         {(f) => (
                           <Row id="f-model" label="Model">
-                            <OpencodeModel id="f-model" value={f.state.value} unset={inherited(defaults.model, 'pick an approved model')} onChange={f.handleChange} />
+                            <OpencodeModel id="f-model" value={f.state.value} unset={modelUnset} onChange={f.handleChange} />
                           </Row>
                         )}
                       </form.Field>
                     ) : (
-                      input('model', 'Model', { placeholder: inherited(defaults.model, 'sonnet'), list: 'claude-models' })
+                      input('model', 'Model', { placeholder: modelUnset, list: 'claude-models' })
                     )}
                     {select('effort', 'Effort', EFFORTS, inherited(defaults.effort, "the model's own"))}
                   </div>
@@ -524,6 +527,7 @@ function FlowPanel({ draft, problems }: { draft: Draft; problems: string[] }) {
   });
   const steps = Object.keys(stepsOf(draft));
   const starts = entries({ ...flowDef(draft), entry: undefined });
+  const classUnset = `${draft.defaults?.class ?? 'standard'} class`; // what a step with no model of its own gets
   const field = (name: 'model' | 'run_budget' | 'max_turns', label: string, props: InputHTMLAttributes<HTMLInputElement>, check?: (v: string) => string | undefined) => (
     <form.Field name={name} validators={check && { onChange: ({ value }) => check(value) }}>
       {(f) => (
@@ -583,12 +587,12 @@ function FlowPanel({ draft, problems }: { draft: Draft; problems: string[] }) {
                 <form.Field name="model">
                   {(f) => (
                     <Row id="g-model" label="Model">
-                      <OpencodeModel id="g-model" value={f.state.value} unset="not set" onChange={f.handleChange} />
+                      <OpencodeModel id="g-model" value={f.state.value} unset={classUnset} onChange={f.handleChange} />
                     </Row>
                   )}
                 </form.Field>
               ) : (
-                field('model', 'Model', { placeholder: 'not set', list: 'claude-models-flow' })
+                field('model', 'Model', { placeholder: classUnset, list: 'claude-models-flow' })
               )
             }
           </form.Subscribe>

@@ -18,10 +18,10 @@ import { fileURLToPath } from 'node:url';
 import { createOpencodeClient } from '@opencode-ai/sdk/v2';
 import type { Event, PermissionRequest } from '@opencode-ai/sdk/v2';
 import { ZERO_USAGE } from '@lamproom/core';
-import type { AgentProvider, AgentRun, Capability, NormalizedEvent, RunResult, RunSpec } from '@lamproom/core';
+import type { AgentProvider, AgentRun, Capability, NormalizedEvent, ProviderModel, RunResult, RunSpec } from '@lamproom/core';
 import { hostExecHost } from '../../exec/host.ts';
 import { createNormalizer } from './normalize.ts';
-import { buildLaunch, pickVariant } from './options.ts';
+import { buildLaunch, modelsFromProviders, pickVariant, serverEnv, variantsOf } from './options.ts';
 import { actionFor, approvalCalls, replyFor, toPermissionRules } from './permissions.ts';
 import { ServerStartError, startServer } from './server.ts';
 import type { StartedServer } from './server.ts';
@@ -73,6 +73,36 @@ export class OpencodeProvider implements AgentProvider {
     const id = this.models[logical] ?? (logical.includes('/') ? logical : undefined);
     if (!id) throw new Error(`no OpenCode model for logical id '${logical}'`);
     return id;
+  }
+
+  async listModels(): Promise<ProviderModel[]> {
+    const configHome = await mkdtemp(join(tmpdir(), 'lr-oc-'));
+    const password = randomBytes(24).toString('hex');
+    let server: StartedServer | undefined;
+    try {
+      server = await startServer(hostExecHost, {
+        opencodePath: this.opencodePath,
+        cwd: configHome,
+        env: { ...serverEnv(this.env, configHome), OPENCODE_SERVER_PASSWORD: password },
+        killGraceMs: this.killGraceMs,
+      });
+      const client = createOpencodeClient({
+        baseUrl: server.url,
+        directory: configHome,
+        throwOnError: true,
+        headers: { Authorization: `Basic ${Buffer.from(`opencode:${password}`).toString('base64')}` },
+      });
+      const { data } = await client.config.providers();
+      if (!data) throw new Error('empty response from the opencode server');
+      return modelsFromProviders(data.providers);
+    } finally {
+      if (server && server.child.exitCode === null && server.child.signalCode === null) {
+        const closed = new Promise((r) => server!.child.once('close', r));
+        terminate(server.child, this.killGraceMs);
+        await closed;
+      }
+      await rm(configHome, { recursive: true, force: true });
+    }
   }
 
   launch(spec: RunSpec): AgentRun {
@@ -165,7 +195,7 @@ export class OpencodeProvider implements AgentProvider {
 
         const { providers } = await ok(client.config.providers());
         const { providerID, modelID } = run.prompt.model;
-        const variants = Object.keys(providers.find((p) => p.id === providerID)?.models[modelID]?.variants ?? {});
+        const variants = variantsOf(providers, providerID, modelID);
 
         const session = spec.resume?.fork
           ? await ok(client.session.fork({ sessionID: spec.resume.sessionId, directory }))

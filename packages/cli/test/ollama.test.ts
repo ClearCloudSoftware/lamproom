@@ -160,9 +160,9 @@ test("a flow's local step: warned of a small window in the check; in OpenSandbox
   const data = temp();
   value(updateAppSettings(data, { opencodeModels: [local('ollama/small:4k')] }));
   writeFileSync(join(data, 'ollama-models.json'), JSON.stringify({ models: [model('small:4k', 4096)] }));
-  const r = loadFlow('flow.yaml', flowProject(yaml), RUN_IN, undefined, modelRules(data));
+  const r = loadFlow('flow.yaml', flowProject(yaml.replace('model: sonnet', 'class: standard')), RUN_IN, undefined, modelRules(data));
   assert.ok(r.ok, JSON.stringify(r));
-  assert.deepEqual(r.config.warnings, [`steps.tests.model: ${contextWarning('ollama/small:4k', 4096)}`]);
+  assert.deepEqual(r.config.warnings, ['steps.tests.model: names a model directly; class: lets the profile in use pick it', `steps.tests.model: ${contextWarning('ollama/small:4k', 4096)}`]);
 
   const boxed = loadFlow('flow.yaml', flowProject(`sandbox: { runtime: opensandbox, image: lamproom:sandbox }\n${yaml}`));
   assert.ok(boxed.ok, JSON.stringify(boxed));

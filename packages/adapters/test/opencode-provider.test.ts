@@ -217,6 +217,15 @@ test('isolates the server from personal config', async () => {
   assert.equal(existsSync(env.XDG_CONFIG_HOME!), false);
 });
 
+test('listModels lists the server\'s models, then stops it and removes its config home', async () => {
+  const { provider, envLine, serverPid } = setup([]);
+  assert.deepEqual(await provider().listModels(), [{ id: 'fake/m1', name: undefined, efforts: ['high'] }]);
+  const env = envLine();
+  assert.equal(env.OPENCODE_DISABLE_PROJECT_CONFIG, '1');
+  assert.equal(existsSync(env.XDG_CONFIG_HOME!), false);
+  assert.throws(() => process.kill(serverPid()!, 0), 'the server is gone');
+});
+
 test('two concurrent runs get separate servers', async () => {
   const a = setup([text, idle]);
   const b = setup([text, idle]);

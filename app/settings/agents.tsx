@@ -7,15 +7,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { HarnessStatus } from '../../packages/cli/src/harnesses.ts';
-import { EFFORTS, type Effort, HARNESS_SCHEMAS, HARNESSES, type Harness, type HarnessConfig } from '../../packages/cli/src/settings.ts';
+import { HARNESS_SCHEMAS, HARNESSES, type Harness, type HarnessConfig } from '../../packages/cli/src/settings.ts';
 import { agentsQuery, type AppView, appSettingsQuery, updateAppSettings } from '../projects/api.ts';
-import { OpencodeModelSelect } from './models.tsx';
 import { ErrorLine, Head } from './settings.tsx';
 import { Loader } from '@/components/loader';
 
-const OWN = '-'; // Radix keeps '' for "nothing picked"
 const blank = (s: string) => s.trim() || null;
 
 /** What the CLI says: installed or not, its version, and the login it would run on. */
@@ -41,21 +38,14 @@ function Agent({ id, view, status }: { id: Harness; view: AppView; status: Harne
   const h = HARNESSES[id];
   const queryClient = useQueryClient();
   const saved = view.app.agents[id];
-  const [f, setF] = useState({ path: saved.path ?? '', model: saved.model ?? '', effort: saved.effort });
-  const cfg: HarnessConfig = { path: blank(f.path), model: blank(f.model), effort: f.effort };
+  const [f, setF] = useState({ path: saved.path ?? '' });
+  const cfg: HarnessConfig = { path: blank(f.path) };
   const errors = Object.fromEntries((HARNESS_SCHEMAS[id].safeParse(cfg).error?.issues ?? []).map((i) => [i.path[0], i.message]));
   const dirty = JSON.stringify(cfg) !== JSON.stringify(saved);
   const save = useMutation({
     mutationFn: () => updateAppSettings({ agents: { ...view.app.agents, [id]: cfg } }),
     onSuccess: () => Promise.all([queryClient.invalidateQueries({ queryKey: ['settings'] }), queryClient.invalidateQueries({ queryKey: ['agents'] })]),
   });
-  const field = (k: 'path' | 'model', label: string, placeholder: string) => (
-    <label className="grid gap-1 text-[11px] text-muted-foreground">
-      {label}
-      <Input value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} placeholder={placeholder} spellCheck={false} autoComplete="off" aria-invalid={errors[k] ? true : undefined} className="h-8 font-mono text-[13px] text-foreground" />
-      {errors[k] && <em className="text-[11px] text-fail not-italic">{errors[k]}</em>}
-    </label>
-  );
   return (
     <section aria-label={h.name} className="grid border border-border bg-card">
       <header className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 border-b border-border px-4 py-3">
@@ -68,34 +58,11 @@ function Agent({ id, view, status }: { id: Harness; view: AppView; status: Harne
         <p className="m-0 font-sans text-xs text-muted-foreground">{h.login}</p>
       </div>
       <div className="grid gap-3 px-4 py-3">
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_150px]">
-          {field('path', 'program', `${h.bin}, on PATH`)}
-          {id === 'opencode' ? (
-            <label className="grid gap-1 text-[11px] text-muted-foreground">
-              default model
-              <OpencodeModelSelect value={f.model} onChange={(model) => setF({ ...f, model })} none="none: each step names one" className="h-8 w-full font-mono text-[13px] text-foreground" />
-            </label>
-          ) : (
-            field('model', 'default model', 'the CLI’s own')
-          )}
-          <label className="grid gap-1 text-[11px] text-muted-foreground">
-            default effort
-            <Select value={f.effort ?? OWN} onValueChange={(v) => setF({ ...f, effort: v === OWN ? null : (v as Effort) })}>
-              <SelectTrigger className="h-8 w-full font-mono text-[13px] text-foreground">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="font-mono">
-                <SelectItem value={OWN}>the model’s own</SelectItem>
-                {EFFORTS.map((e) => (
-                  <SelectItem key={e} value={e}>
-                    {e}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-        </div>
-        <p className="m-0 font-sans text-xs text-muted-foreground">Model: {h.model}. A flow step that names its own model and effort keeps them.</p>
+        <label className="grid gap-1 text-[11px] text-muted-foreground sm:max-w-md">
+          program
+          <Input value={f.path} onChange={(e) => setF({ path: e.target.value })} placeholder={`${h.bin}, on PATH`} spellCheck={false} autoComplete="off" aria-invalid={errors.path ? true : undefined} className="h-8 font-mono text-[13px] text-foreground" />
+          {errors.path && <em className="text-[11px] text-fail not-italic">{errors.path}</em>}
+        </label>
         <ErrorLine error={save.error} />
         <div>
           <Button size="sm" disabled={!dirty || Object.keys(errors).length > 0 || save.isPending} onClick={() => save.mutate()}>
@@ -124,7 +91,7 @@ export function AgentsPage() {
             <Button size="sm" variant="outline" disabled={agents.isFetching} onClick={() => void agents.refetch()}>
               {agents.isFetching ? 'Checking…' : 'Check again'}
             </Button>
-            <span className="text-xs text-muted-foreground">Saved here; runs do not read these yet. Each flow step still names its adapter and model.</span>
+            <span className="text-xs text-muted-foreground">Saved here. Which model a step runs on is set under Model classes.</span>
           </div>
         </>
       )}

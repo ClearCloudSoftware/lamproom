@@ -1,0 +1,535 @@
+<meta charset="utf-8">
+<title>Model classes</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --paper:#FBFAF7; --surface:#FFFFFF; --surface-2:#F4F2EC; --surface-3:#EDEAE1;
+  --line:#E4E1D8; --line-2:#CFCBBE;
+  --ink:#17171C; --ink-2:#55535C; --ink-3:#7A7880;
+  --run:#0E6E74;  --run-soft:#0E6E7414;
+  --wait:#A35A00; --wait-soft:#A35A0014; --wait-wash:#F7EAD3; --wait-edge:#DCC49A;
+  --wait-ink:#FDF6EA; --wait-ink-2:#F8E8D0;
+  --fail:#B0231B; --fail-soft:#B0231B12; --fail-edge:#EBD0CC;
+  --done:#B8B4A8; --pend:#EAE7DE;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Helvetica,sans-serif;
+  --t:150ms cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box;border-radius:0}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+button,select{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;margin:0;text-align:left;cursor:pointer}
+:focus-visible{outline:2px solid var(--run);outline-offset:-2px}
+.lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.sans{font-family:var(--sans)}
+.lu{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+
+/* ── chrome ─────────────────────────────────────────────────────────── */
+.mctop{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:18px;padding:11px 24px;
+  background:var(--surface);border-bottom:1px solid var(--line)}
+.brand{font-weight:600;letter-spacing:-.01em}
+.brand em{font-style:normal;color:var(--line-2);padding:0 .35em}
+.brand span{color:var(--ink-2);font-weight:400}
+.sp{flex:1}
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);gap:32px;max-width:1240px;margin:0 auto;padding:28px 24px 120px}
+
+/* ── settings nav: matches app/settings/nav.tsx ─────────────────────── */
+.snav{display:grid;gap:2px;align-content:start;position:sticky;top:70px}
+.snav a{display:flex;align-items:center;gap:8px;padding:6px 10px;border-left:3px solid transparent;
+  font-family:var(--sans);font-size:13px;color:var(--ink-2);text-decoration:none;transition:background var(--t)}
+.snav a:hover{background:var(--surface-2);color:var(--ink)}
+.snav a .lu{color:var(--ink-3)}
+.snav a.open{color:var(--ink);font-weight:500}
+.snav a.sub{padding-left:34px;font-size:12.5px}
+.snav a.here{border-left-color:var(--run);background:var(--surface);color:var(--ink);font-weight:500}
+.snav .new{font-family:var(--mono);font-size:9px;letter-spacing:.1em;color:var(--run);border:1px solid var(--run);padding:0 4px;margin-left:auto}
+
+/* ── document ───────────────────────────────────────────────────────── */
+.doc{min-width:0;display:grid;gap:28px;align-content:start}
+h1{font-size:20px;font-weight:600;margin:0 0 6px;letter-spacing:-.01em}
+h2{font-size:14px;font-weight:600;margin:0}
+.lede{font-family:var(--sans);font-size:14px;color:var(--ink-2);margin:0;max-width:72ch}
+.lede code,.note code{font-family:var(--mono);font-size:12px;background:var(--surface-2);padding:0 4px}
+.secthead{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.secthead p{margin:0;font-family:var(--sans);font-size:13px;color:var(--ink-3)}
+
+/* ── profiles ───────────────────────────────────────────────────────── */
+.ptabs{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line-2);background:var(--surface)}
+.ptab{padding:11px 14px 12px;border-right:1px solid var(--line);border-bottom:2px solid transparent;transition:background var(--t)}
+.ptab:last-child{border-right:0}
+.ptab:hover{background:var(--surface-2)}
+.ptab[aria-selected="true"]{background:var(--surface-2);border-bottom-color:var(--ink)}
+.ptab .pn{display:flex;align-items:center;gap:8px;font-weight:600}
+.ptab .pd{font-family:var(--sans);font-size:12px;color:var(--ink-3);margin-top:3px}
+.inuse{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#fff;background:var(--run);padding:1px 6px}
+.pbarline{display:flex;align-items:center;gap:12px;padding:9px 14px;background:var(--surface);border:1px solid var(--line-2);border-top:0;
+  font-family:var(--sans);font-size:12.5px;color:var(--ink-2)}
+.pbarline b{font-family:var(--mono);font-weight:600;color:var(--ink)}
+
+/* ── class grid ─────────────────────────────────────────────────────── */
+.cgrid{border:1px solid var(--line-2);background:var(--surface)}
+.ghead,.grow{display:grid;grid-template-columns:200px minmax(0,1fr) minmax(0,1fr)}
+.ghead{background:var(--surface-3);border-bottom:1px solid var(--line-2)}
+.ghead>div{padding:8px 14px;display:flex;align-items:center;gap:8px}
+.ghead>div+div{border-left:1px solid var(--line-2)}
+.ghead .cli{font-weight:600;font-size:12px}
+.ghead .cli small{font-weight:400;color:var(--ink-3);font-size:11px}
+.grow{border-bottom:1px solid var(--line)}
+.grow:last-child{border-bottom:0}
+.cname{padding:12px 14px}
+.cname b{font-size:14px;font-weight:600}
+.cname p{margin:4px 0 0;font-family:var(--sans);font-size:12px;color:var(--ink-3);line-height:1.4}
+.cell{padding:10px 14px 11px;border-left:1px solid var(--line);display:grid;gap:6px;position:relative;transition:background var(--t)}
+.cell.edited{box-shadow:inset 3px 0 0 var(--ink)}
+.cell.unset{background:var(--wait-wash)}
+.pick{display:grid;grid-template-columns:1fr;gap:6px}
+.pick .effrow{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:center}
+select.sel{width:100%;height:30px;padding:0 8px;background:var(--surface);border:1px solid var(--line-2);font-size:12.5px;cursor:pointer;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%237A7880' stroke-width='1.4'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 9px center;padding-right:24px;transition:border-color var(--t)}
+select.sel:hover{border-color:var(--ink-3)}
+select.sel:disabled{color:var(--ink-3);background-color:var(--surface-2);cursor:not-allowed}
+.meta{font-size:11px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:2px 10px}
+.meta .tag{border:1px solid var(--line-2);padding:0 4px;font-size:10px;color:var(--ink-2)}
+.meta .warn{color:var(--wait);display:inline-flex;gap:5px;align-items:center}
+.meta .warn .lu{width:13px;height:13px}
+
+/* ── try it ─────────────────────────────────────────────────────────── */
+.try{border:1px solid var(--line-2);background:var(--surface)}
+.trytabs{display:flex;background:var(--surface-3);border-bottom:1px solid var(--line-2)}
+.tt{padding:9px 16px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:color var(--t),border-color var(--t)}
+.tt:hover{color:var(--ink)}
+.tt[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--run)}
+.trytabs .hint{margin-left:auto;align-self:center;padding-right:14px;font-family:var(--sans);font-size:12px;color:var(--ink-3)}
+.trybody{padding:16px;overflow-x:auto}
+.ctrls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.ctrls label{display:grid;gap:4px}
+.trace{border-top:1px solid var(--line)}
+.tline{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px;padding:7px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.tline .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.tline .v{color:var(--ink-2)}
+.tline .v b{color:var(--ink);font-weight:600}
+.tline .why{font-family:var(--sans);font-size:12px;color:var(--ink-3);margin-left:8px}
+.tline.result .v{font-size:14px}
+.cmd{margin-top:14px;background:var(--surface-2);border:1px solid var(--line);padding:10px 12px;font-size:12px;white-space:pre-wrap;color:var(--ink)}
+.cmd .c{color:var(--ink-3)}
+.verdict{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;margin-top:14px;font-family:var(--sans);font-size:13px}
+.verdict.fail{background:var(--fail-soft);border:1px solid var(--fail-edge);border-left:3px solid var(--fail);color:var(--fail)}
+.verdict.warn{background:var(--wait-soft);border:1px solid var(--wait-edge);border-left:3px solid var(--wait);color:var(--wait)}
+.verdict.ok{background:var(--run-soft);border:1px solid #0E6E7433;border-left:3px solid var(--run);color:var(--run)}
+
+/* flow check table */
+.ftable{width:100%;border-collapse:collapse;font-size:12.5px}
+.ftable th{text-align:left;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:500;
+  padding:7px 10px;border-bottom:1px solid var(--line-2);background:var(--surface-2)}
+.ftable th.active{color:var(--run);box-shadow:inset 0 -2px 0 var(--run)}
+.ftable td{overflow-wrap:anywhere;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+.ftable td.active{background:var(--run-soft)}
+.ftable .dim{color:var(--ink-3)}
+.ftable .bad{color:var(--fail);display:inline-flex;gap:5px;align-items:center}
+.ftable .soft{color:var(--wait);display:inline-flex;gap:5px;align-items:center}
+.ftable .lu{width:13px;height:13px}
+.ftable .eff{color:var(--ink-3)}
+.fsum{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-family:var(--sans);font-size:12.5px;color:var(--ink-2)}
+.fsum .fail{color:var(--fail)}
+.fsum .warn{color:var(--wait)}
+
+/* ── save bar ───────────────────────────────────────────────────────── */
+.savebar{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;align-items:center;gap:12px;padding:10px 24px;
+  background:var(--surface);border-top:2px solid var(--ink);transform:translateY(100%);visibility:hidden;transition:transform var(--t),visibility var(--t)}
+.savebar.show{transform:none;visibility:visible}
+.savebar .msg{font-family:var(--sans);font-size:13px}
+.act{border:1px solid var(--line-2);padding:5px 12px;font-size:12px;transition:background var(--t),border-color var(--t),color var(--t)}
+.act:hover{background:var(--surface-2);border-color:var(--ink-3)}
+.act.primary{border-color:var(--run);color:var(--run);background:var(--run-soft);font-weight:500}
+.act.primary:hover{background:var(--run);color:#fff}
+.toast{position:fixed;right:24px;bottom:24px;z-index:7;max-width:420px;padding:10px 14px;background:var(--ink);color:#fff;
+  font-family:var(--sans);font-size:13px;opacity:0;transform:translateY(6px);transition:opacity var(--t),transform var(--t);pointer-events:none}
+.toast.show{opacity:1;transform:none}
+
+@media (max-width:980px){
+  .shell{grid-template-columns:1fr}
+  .snav{position:static;display:flex;flex-wrap:wrap}
+  .ghead,.grow{grid-template-columns:1fr}
+  .ghead>div+div,.cell{border-left:0}
+  .ctrls{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::after,*::before{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+
+<header class="mctop">
+  <div class="brand">lamproom<em>/</em><span>settings</span></div>
+  <span class="sp"></span>
+  <span class="lbl">app-wide · every project</span>
+</header>
+
+<div class="shell">
+  <nav class="snav" aria-label="Settings sections" id="snav"></nav>
+
+  <main class="doc">
+    <section>
+      <h1>Model classes</h1>
+      <p class="lede">Flow steps ask for a class such as <code>class: deep</code> instead of naming a model. A step still says which agent CLI it runs on. The table below turns each class into a model and an effort level for that CLI. Profiles are complete alternative tables: switching profile changes every flow at once.</p>
+    </section>
+
+    <section aria-labelledby="h-prof">
+      <div class="secthead"><h2 id="h-prof">Profile</h2><p>Pick one to edit. Only the one marked <em>in use</em> applies to new runs.</p></div>
+      <div class="ptabs" role="tablist" id="ptabs"></div>
+      <div class="pbarline" id="pbarline"></div>
+    </section>
+
+    <section aria-labelledby="h-cls">
+      <div class="secthead"><h2 id="h-cls">Classes</h2><p id="clsnote"></p></div>
+      <div class="cgrid" id="cgrid"></div>
+    </section>
+
+    <section aria-labelledby="h-try">
+      <div class="secthead"><h2 id="h-try">Try it</h2><p>Uses your unsaved edits, so you can check before you save.</p></div>
+      <div class="try">
+        <div class="trytabs" role="tablist">
+          <button class="tt" role="tab" data-mode="step" aria-selected="true">One step</button>
+          <button class="tt" role="tab" data-mode="flow" aria-selected="false">A flow</button>
+          <span class="hint" id="tryhint"></span>
+        </div>
+        <div class="trybody" id="trybody"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="savebar" id="savebar" role="region" aria-label="Unsaved changes">
+  <span class="msg" id="savemsg"></span>
+  <span class="sp"></span>
+  <button class="act" id="discard">Discard</button>
+  <button class="act primary" id="save">Save changes</button>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* Lucide icons, inline. */
+const LU = {
+  settings:'<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+  activity:'<path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>',
+  plug:'<path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/>',
+  cpu:'<rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/>',
+  bot:'<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>',
+  cog:'<path d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16Z"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/><path d="M12 2v2"/><path d="M12 22v-2"/><path d="m17 20.66-1-1.73"/><path d="M11 10.27 7 3.34"/><path d="m20.66 17-1.73-1"/><path d="m3.34 7 1.73 1"/><path d="M14 12h8"/><path d="M2 12h2"/><path d="m20.66 7-1.73 1"/><path d="m3.34 17 1.73-1"/><path d="m17 3.34-1 1.73"/><path d="m11 13.73-4 6.93"/>',
+  workflow:'<rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/>',
+  sliders:'<line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  x:'<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+  check:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  terminal:'<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>',
+};
+const lu = (n) => `<svg class="lu" viewBox="0 0 24 24" aria-hidden="true">${LU[n]}</svg>`;
+
+/* ── the settings nav, as app/settings/nav.tsx has it, plus the new page ── */
+document.getElementById('snav').innerHTML = [
+  ['settings','General'],['activity','System status'],['plug','Connections'],['cpu','LLM Provider'],
+  ['bot','Agents','open'],[null,'Agent CLIs','sub'],[null,'OpenCode models','sub'],[null,'Model classes','sub here'],
+  ['cog','Internal steps'],['workflow','Workflows'],['sliders','Defaults'],
+].map(([i,t,c='']) => `<a href="#" class="${c}" ${c.includes('here')?'aria-current="page"':''}>${i?lu(i):''}${t}${c.includes('here')?'<span class="new">NEW</span>':''}</a>`).join('');
+
+/* ── what each CLI can run ─────────────────────────────────────────────
+   Claude: every current model takes low..max. Opus 5.5 and Haiku 5.5 default to medium, the rest to high.
+   OpenCode: effort goes out as a model variant; only these models list variants (from the server's model list). */
+const LEVELS = ['low','medium','high','xhigh','max'];
+const CLIS = {
+  cc:{ id:'claude-code', name:'Claude Code', note:'your Claude login' },
+  oc:{ id:'opencode', name:'OpenCode', note:'approved models only' },
+};
+const MODELS = {
+  cc:[
+    { id:'opus',  float:'claude-opus-5-5',  label:'Opus 5.5',  def:'medium', price:'$4 / $20' },
+    { id:'sonnet',float:'claude-sonnet-5-5',label:'Sonnet 5.5',def:'high',   price:'$2 / $10' },
+    { id:'haiku', float:'claude-haiku-5-5', label:'Haiku 5.5', def:'medium', price:'$0.10 / $0.50' },
+    { id:'claude-fable-5-2', label:'Fable 5.2', def:'high', price:'$8 / $40' },
+    { id:'claude-opus-5-5',  label:'Opus 5.5',  def:'medium', price:'$4 / $20' },
+    { id:'claude-sonnet-5-5',label:'Sonnet 5.5',def:'high',   price:'$2 / $10' },
+    { id:'claude-haiku-5-5', label:'Haiku 5.5', def:'medium', price:'$0.10 / $0.50' },
+  ],
+  oc:[
+    { id:'openrouter/qwen/qwen3-coder', variants:[], price:'$0.22 / $0.95' },
+    { id:'openrouter/deepseek/deepseek-v4.1-flash', variants:['low','medium','high'], price:'$0.10 / $0.40' },
+    { id:'openrouter/openai/gpt-4.1-mini', variants:[], price:'$0.40 / $1.60' },
+    { id:'ollama/qwen3-coder:30b', variants:[], price:'local' },
+    { id:'ollama/gemma4:26b-64k', variants:[], price:'local' },
+  ],
+};
+const model = (cli, id) => MODELS[cli].find(m => m.id === id);
+const levelsFor = (cli, m) => cli === 'cc' ? LEVELS : m.variants;
+/* Rule: an effort the model can't take runs at the nearest level below it it can; none below means the lowest it has. */
+function clamp(cli, m, eff) {
+  const ok = levelsFor(cli, m);
+  if (!eff || ok.includes(eff)) return eff;
+  if (!ok.length) return null;
+  const i = LEVELS.indexOf(eff);
+  for (let j = i; j >= 0; j--) if (ok.includes(LEVELS[j])) return LEVELS[j];
+  return ok[0];
+}
+
+const CLASSES = [
+  { id:'deep',     d:'A thinking model at high effort. Implementing, planning, hard debugging.' },
+  { id:'standard', d:'Reviews, docs and routine edits.' },
+  { id:'fast',     d:'Triage, summaries, imports. Cheap and quick.' },
+];
+const PROFILES = [
+  { id:'quality',  d:'The strongest models. Costs the most.' },
+  { id:'balanced', d:'Strong where it matters, cheap elsewhere.' },
+  { id:'budget',   d:'Drafts and trials: small and local models.' },
+];
+
+/* Seed: balanced in use; quality carries an effort its OpenCode model can't take; budget leaves one cell unset. */
+const c = (m, e) => ({ model:m, effort:e });
+const SEED = {
+  quality:{
+    deep:    { cc:c('claude-fable-5-2','high'), oc:c('openrouter/deepseek/deepseek-v4.1-flash','xhigh') },
+    standard:{ cc:c('opus','high'),             oc:c('openrouter/qwen/qwen3-coder',null) },
+    fast:    { cc:c('sonnet','medium'),         oc:c('openrouter/deepseek/deepseek-v4.1-flash','medium') },
+  },
+  balanced:{
+    deep:    { cc:c('opus','high'),     oc:c('openrouter/qwen/qwen3-coder',null) },
+    standard:{ cc:c('sonnet','medium'), oc:c('openrouter/deepseek/deepseek-v4.1-flash','high') },
+    fast:    { cc:c('haiku','low'),     oc:c('openrouter/deepseek/deepseek-v4.1-flash','low') },
+  },
+  budget:{
+    deep:    { cc:c('sonnet','high'),   oc:c(null,null) },
+    standard:{ cc:c('haiku','medium'),  oc:c('ollama/qwen3-coder:30b',null) },
+    fast:    { cc:c('haiku','low'),     oc:c('ollama/gemma4:26b-64k',null) },
+  },
+};
+
+/* The repo's flows as they would read with classes. A step with `model:` names a model and skips the table. */
+const FLOWS = {
+  'flows/delivery.yaml':{ defaults:{ cli:'cc', cls:'standard' }, steps:[
+    { id:'plan', cls:'deep', gate:true }, { id:'implement', cls:'deep' },
+    { id:'tests', cli:'oc', cls:'fast' }, { id:'check', shell:'pnpm test' }, { id:'review' } ] },
+  'flows/review-loop.yaml':{ defaults:{ cli:'cc', cls:'standard' }, steps:[
+    { id:'implement', cls:'deep' }, { id:'review' } ] },
+  'flows/opencode-trial.yaml':{ defaults:{ cli:'oc', cls:'standard' }, steps:[
+    { id:'plan', cls:'deep', gate:true }, { id:'build', model:'openrouter/deepseek/deepseek-v4.1-flash' },
+    { id:'check', shell:'test -n "$(git status --porcelain)"' } ] },
+  'internal/repo-analyst/flow.yaml':{ defaults:{ cli:'cc', cls:'standard' }, steps:[ { id:'analyse' } ] },
+  'internal/backlog-importer/flow.yaml':{ defaults:{ cli:'cc', cls:'fast' }, steps:[ { id:'import' } ] },
+};
+
+/* ── state ─────────────────────────────────────────────────────────── */
+const clone = (o) => JSON.parse(JSON.stringify(o));
+const S = {
+  saved:{ inUse:'balanced', tables:clone(SEED) },
+  inUse:'balanced', tables:clone(SEED), editing:'balanced',
+  mode:'step', step:{ cli:'cc', cls:'deep', effort:'', profile:'' }, flow:'flows/delivery.yaml',
+};
+
+/* Resolve one step: class + CLI + optional step effort, under a profile. Returns the trace and the outcome. */
+function resolve({ cli, cls, effort, model:native }, profile) {
+  if (native) {
+    const m = model(cli, native) || { id:native, variants:[], def:null };
+    return { ok:true, native:true, cli, model:m, effort:clamp(cli, m, effort) ?? null, asked:effort };
+  }
+  const cell = S.tables[profile][cls][cli];
+  if (!cell.model) return { ok:false, cli, cls, profile };
+  const m = model(cli, cell.model);
+  const asked = effort || cell.effort;           // a step's own effort beats the class's
+  const from = effort ? 'step' : cell.effort ? 'class' : 'model';
+  const eff = clamp(cli, m, asked);
+  return { ok:true, cli, cls, profile, cell, model:m, asked, from, effort:eff, clamped: asked && eff !== asked };
+}
+const effortText = (r) => {
+  if (r.cli === 'oc' && !r.model.variants?.length) return 'none';
+  if (r.effort) return r.effort;
+  return r.model.def ? `${r.model.def} (model default)` : 'model default';
+};
+
+/* ── render: profiles ──────────────────────────────────────────────── */
+function renderProfiles() {
+  document.getElementById('ptabs').innerHTML = PROFILES.map(p => `
+    <button class="ptab" role="tab" data-p="${p.id}" aria-selected="${p.id===S.editing}">
+      <span class="pn">${p.id}${p.id===S.inUse?'<span class="inuse">in use</span>':''}</span>
+      <div class="pd">${p.d}</div>
+    </button>`).join('');
+  const bar = document.getElementById('pbarline');
+  bar.innerHTML = S.editing === S.inUse
+    ? `<span>Editing <b>${S.editing}</b>, the profile new runs use. Runs already going keep the models they started with.</span>`
+    : `<span>Editing <b>${S.editing}</b>. New runs use <b>${S.inUse}</b>.</span><span class="sp"></span><button class="act" id="useit">Use ${S.editing} for new runs</button>`;
+  document.getElementById('useit')?.addEventListener('click', () => { S.inUse = S.editing; renderAll(); });
+}
+
+/* ── render: class grid ────────────────────────────────────────────── */
+function modelOptions(cli, cur) {
+  const opt = (m, text) => `<option value="${m.id}" ${m.id===cur?'selected':''}>${text}</option>`;
+  if (cli === 'cc') return `
+    <optgroup label="Follows the latest">${MODELS.cc.filter(m=>m.float).map(m=>opt(m,`${m.id} → ${m.label}`)).join('')}</optgroup>
+    <optgroup label="Pinned">${MODELS.cc.filter(m=>!m.float).map(m=>opt(m,m.id)).join('')}</optgroup>`;
+  return `<option value="" ${!cur?'selected':''}>— not set —</option>` + MODELS.oc.map(m=>opt(m,m.id)).join('');
+}
+function effortOptions(cli, m, cur) {
+  if (!m) return `<option>—</option>`;
+  const ok = levelsFor(cli, m);
+  if (!ok.length) return `<option>no effort</option>`;
+  const def = cli === 'cc' ? `model default (${m.def})` : 'model default';
+  return `<option value="" ${!cur?'selected':''}>${def}</option>` +
+    LEVELS.map(l => `<option value="${l}" ${l===cur?'selected':''}>${ok.includes(l) ? l : `${l} → ${clamp(cli,m,l)}`}</option>`).join('');
+}
+function cellMeta(cli, cell) {
+  if (!cell.model) return `<span class="warn">${lu('alert')}OpenCode steps that ask for this class can't run under this profile.</span>`;
+  const m = model(cli, cell.model), bits = [];
+  if (cli === 'cc') bits.push(m.float ? `<span class="tag">follows</span> today ${m.float}` : `<span class="tag">pinned</span>`);
+  bits.push(m.price === 'local' ? 'local · free' : `${m.price} per MTok`);
+  if (cli === 'oc' && !m.variants.length) bits.push('no effort variants');
+  const eff = clamp(cli, m, cell.effort);
+  if (cell.effort && eff !== cell.effort) bits.push(`<span class="warn">${lu('alert')}No ${cell.effort} variant: runs at ${eff}</span>`);
+  if (cli === 'cc' && !cell.effort && m.def === 'medium') bits.push(`<span class="warn">${lu('alert')}This model defaults to medium</span>`);
+  return bits.map(b => `<span>${b}</span>`).join('');
+}
+function renderGrid() {
+  const t = S.tables[S.editing], saved = S.saved.tables[S.editing];
+  document.getElementById('clsnote').textContent = `${S.editing}: what each class runs as, per agent CLI.`;
+  document.getElementById('cgrid').innerHTML = `
+    <div class="ghead"><div class="lbl">Class</div>
+      ${Object.entries(CLIS).map(([k,v]) => `<div class="cli">${lu('terminal')}${v.id}<small>${v.note}</small></div>`).join('')}</div>` +
+    CLASSES.map(k => `
+    <div class="grow">
+      <div class="cname"><b>${k.id}</b><p>${k.d}</p></div>
+      ${Object.keys(CLIS).map(cli => {
+        const cell = t[k.id][cli], m = cell.model && model(cli, cell.model);
+        const edited = JSON.stringify(cell) !== JSON.stringify(saved[k.id][cli]);
+        return `<div class="cell ${edited?'edited':''} ${!cell.model?'unset':''}">
+          <div class="pick">
+            <select class="sel" data-k="${k.id}" data-cli="${cli}" data-f="model" aria-label="${k.id} model on ${CLIS[cli].id}">${modelOptions(cli, cell.model)}</select>
+            <div class="effrow">
+              <select class="sel" data-k="${k.id}" data-cli="${cli}" data-f="effort" aria-label="${k.id} effort on ${CLIS[cli].id}" ${!m || !levelsFor(cli,m).length ? 'disabled' : ''}>${effortOptions(cli, m, cell.effort)}</select>
+              <div class="meta">${cellMeta(cli, cell)}</div>
+            </div>
+          </div>
+        </div>`;}).join('')}
+    </div>`).join('');
+}
+
+/* ── render: try it ────────────────────────────────────────────────── */
+const sel = (key, opts, cur, label) => `<label><span class="lbl">${label}</span>
+  <select class="sel" data-try="${key}">${opts.map(([v,t]) => `<option value="${v}" ${v===cur?'selected':''}>${t}</option>`).join('')}</select></label>`;
+
+function renderStep() {
+  const st = S.step, profile = st.profile || S.inUse;
+  const r = resolve({ cli:st.cli, cls:st.cls, effort:st.effort }, profile);
+  let html = `<div class="ctrls">
+    ${sel('cli', Object.entries(CLIS).map(([k,v]) => [k,v.id]), st.cli, 'Agent CLI (adapter)')}
+    ${sel('cls', CLASSES.map(k => [k.id,k.id]), st.cls, 'Class')}
+    ${sel('effort', [['','— not set —'], ...LEVELS.map(l => [l,l])], st.effort, 'Step effort')}
+    ${sel('profile', [['',`in use (${S.inUse})`], ...PROFILES.map(p => [p.id,p.id])], st.profile, 'Profile')}
+  </div>`;
+  const yaml = `<span class="c"># the step, as the flow would write it</span>\nimplement: { adapter: ${CLIS[st.cli].id}, class: ${st.cls}${st.effort?`, effort: ${st.effort}`:''}, prompt: prompts/implement.md }`;
+  html += `<div class="cmd">${yaml}</div><div class="trace" style="margin-top:14px">`;
+  const line = (k, v, why='') => `<div class="tline"><span class="k">${k}</span><span class="v">${v}${why?`<span class="why">${why}</span>`:''}</span></div>`;
+  html += line('profile', `<b>${profile}</b>`, st.profile ? 'picked here, to compare' : 'the one in use');
+  html += line('table', `${profile} › ${st.cls} › ${CLIS[st.cli].id}`);
+  if (!r.ok) {
+    html += `</div><div class="verdict fail">${lu('x')}<span>No OpenCode model is set for <b>${st.cls}</b> in <b>${profile}</b>. A flow with this step refuses to start, and <code>lr-run-flow --check</code> reports it. Set a model in the table above.</span></div>`;
+    return html;
+  }
+  const m = r.model;
+  html += line('model', `<b>${m.id}</b>`, m.float ? `follows the latest: Claude Code runs it as ${m.float} today` : st.cli==='cc' ? 'pinned' : '');
+  const why = r.from === 'step' ? 'the step sets it, over the class' : r.from === 'class' ? 'from the class' : 'neither the step nor the class sets it';
+  html += line('effort', `<b>${effortText(r)}</b>`, r.clamped ? `asked for ${r.asked}; ${m.id} has no ${r.asked} variant` : st.cli==='oc' && !m.variants.length ? `${m.id} has no effort variants, so effort is dropped` : why);
+  html += line('recorded', `class ${st.cls} · profile ${profile} · model ${m.float || m.id} · effort ${r.effort || (m.def ?? 'none')}`, 'on the run, for cost by class');
+  html += `</div>`;
+  const cmd = st.cli === 'cc'
+    ? `<span class="c"># what Lamproom launches</span>\nclaude --model ${m.id}${r.effort?` --effort ${r.effort}`:''} …`
+    : `<span class="c"># what Lamproom sends to the OpenCode server</span>\nprompt.model = { providerID: "${m.id.split('/')[0]}", modelID: "${m.id.slice(m.id.indexOf('/')+1)}" }${r.effort?`\nvariant = "${r.effort}"`:''}`;
+  html += `<div class="cmd">${cmd}</div>`;
+  if (r.clamped) html += `<div class="verdict warn">${lu('alert')}<span>Runs at <b>${r.effort}</b>, not ${r.asked}. Today OpenCode drops an effort the model has no variant for without saying so. With classes it runs at the nearest level below and the run log says so.</span></div>`;
+  else if (st.cli==='cc' && !r.effort && m.def==='medium') html += `<div class="verdict warn">${lu('alert')}<span>No effort set, so ${m.label} runs at its default, <b>medium</b>, one level below earlier Opus models. Set one on the class if you expect high.</span></div>`;
+  return html;
+}
+
+function renderFlow() {
+  const f = FLOWS[S.flow];
+  let fails = 0, warns = 0;
+  const rows = f.steps.map(s => {
+    const cli = s.cli || f.defaults.cli;
+    if (s.shell) return `<tr><td>${s.id}</td><td class="dim">shell</td><td class="dim" colspan="4">${s.shell}: runs no model</td></tr>`;
+    const inherits = !s.cls && !s.model;
+    const cls = s.cls || f.defaults.cls;
+    const ask = s.model ? `<span class="soft">${lu('alert')}model: ${s.model}</span>`
+      : `${cls}${inherits?' <span class="dim">(defaults)</span>':''}`;
+    const cells = PROFILES.map(p => {
+      const r = resolve(s.model ? { cli, model:s.model } : { cli, cls }, p.id);
+      const act = p.id === S.inUse ? 'active' : '';
+      if (!r.ok) { if (act) fails++; return `<td class="${act}"><span class="bad">${lu('x')}not set</span></td>`; }
+      if (r.native && act) warns++;
+      return `<td class="${act}">${r.model.id}<br><span class="eff">${effortText(r)}${r.clamped?` · asked ${r.asked}`:''}</span></td>`;
+    }).join('');
+    return `<tr><td>${s.id}${s.gate?' <span class="dim">· gate</span>':''}</td><td>${CLIS[cli].id}</td><td>${ask}</td>${cells}</tr>`;
+  }).join('');
+  const sum = fails
+    ? `<span class="fail">${fails} step${fails>1?'s':''} can't run under ${S.inUse}: the flow refuses to start.</span>`
+    : `<span>Every step resolves under ${S.inUse}.</span>`;
+  return `<div class="ctrls" style="grid-template-columns:minmax(0,2fr) 1fr 1fr 1fr">
+      ${sel('flow', Object.keys(FLOWS).map(k => [k,k]), S.flow, 'Flow')}
+    </div>
+    <table class="ftable">
+      <thead><tr><th>Step</th><th>CLI</th><th>Asks for</th>
+        ${PROFILES.map(p => `<th class="${p.id===S.inUse?'active':''}">${p.id}${p.id===S.inUse?' · in use':''}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="fsum">${sum}${warns?`<span class="warn">${warns} step names a model directly: it runs as written, and profiles don't change it.</span>`:''}</div>`;
+}
+
+function renderTry() {
+  document.querySelectorAll('.tt').forEach(b => b.setAttribute('aria-selected', b.dataset.mode === S.mode));
+  document.getElementById('tryhint').textContent = S.mode === 'step' ? 'How one step resolves, layer by layer' : 'Every step of a flow, under each profile';
+  document.getElementById('trybody').innerHTML = S.mode === 'step' ? renderStep() : renderFlow();
+}
+
+/* ── dirty tracking + save ─────────────────────────────────────────── */
+function changes() {
+  let n = 0;
+  for (const p of PROFILES) for (const k of CLASSES) for (const cli of Object.keys(CLIS))
+    if (JSON.stringify(S.tables[p.id][k.id][cli]) !== JSON.stringify(S.saved.tables[p.id][k.id][cli])) n++;
+  return n + (S.inUse !== S.saved.inUse ? 1 : 0);
+}
+function renderSave() {
+  const n = changes();
+  document.getElementById('savebar').classList.toggle('show', n > 0);
+  document.getElementById('savemsg').innerHTML = `<b>${n}</b> unsaved change${n>1?'s':''}${S.inUse!==S.saved.inUse?` · new runs would use <b>${S.inUse}</b>`:''}`;
+}
+function toast(t) {
+  const el = document.getElementById('toast'); el.textContent = t; el.classList.add('show');
+  clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove('show'), 3200);
+}
+function renderAll() { renderProfiles(); renderGrid(); renderTry(); renderSave(); }
+
+/* ── events ────────────────────────────────────────────────────────── */
+document.addEventListener('click', e => {
+  const p = e.target.closest('.ptab'); if (p) { S.editing = p.dataset.p; renderAll(); return; }
+  const t = e.target.closest('.tt'); if (t) { S.mode = t.dataset.mode; renderTry(); return; }
+  if (e.target.closest('#save')) { S.saved = { inUse:S.inUse, tables:clone(S.tables) }; renderAll(); toast('Saved. New runs use these from now on; runs already going keep what they started with.'); }
+  if (e.target.closest('#discard')) { S.tables = clone(S.saved.tables); S.inUse = S.saved.inUse; renderAll(); }
+  if (e.target.closest('.snav a')) e.preventDefault();
+});
+document.addEventListener('change', e => {
+  const s = e.target;
+  if (s.dataset.f) {
+    const cell = S.tables[S.editing][s.dataset.k][s.dataset.cli];
+    if (s.dataset.f === 'model') {
+      cell.model = s.value || null;
+      const m = cell.model && model(s.dataset.cli, cell.model);
+      if (!m || !levelsFor(s.dataset.cli, m).length) cell.effort = null;   // nothing to set on this model
+    } else cell.effort = s.value || null;
+    renderAll(); return;
+  }
+  if (s.dataset.try === 'flow') S.flow = s.value;
+  else if (s.dataset.try) S.step[s.dataset.try] = s.value;
+  renderTry();
+});
+
+renderAll();
+</script>

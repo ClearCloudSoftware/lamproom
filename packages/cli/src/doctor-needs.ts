@@ -7,9 +7,10 @@ import { readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readAppSettings } from './app-settings.ts';
-import { isDir } from './config.ts';
+import { isDir, type ModelRules } from './config.ts';
 import { agentNeeds, loadFlow, NEEDS, type Sandbox } from './flow-config.ts';
 import { boxImage } from './isolation.ts';
+import { modelRules } from './models.ts';
 import { readProjects } from './projects.ts';
 import { APP_DEFAULTS, type AppSettings, isLocal, type Knowledge, resolveSettings, TRUST, type Trust } from './settings.ts';
 
@@ -74,8 +75,11 @@ export function readSetup(dataDir: string, flowsDir: string): Setup {
   const flows: Setup['flows'] = [];
   const unreadableFlows: string[] = [];
   const names = isDir(flowsDir) ? readdirSync(flowsDir).filter((f) => f.endsWith('.yaml')).map((f) => f.slice(0, -'.yaml'.length)).sort() : [];
+  // Classes resolve through the table, so a flow that names no model still says what it reaches; whether a model may run is the run's check, not this one's.
+  const table = read('settings.json', () => modelRules(dataDir), undefined);
+  const rules: ModelRules | undefined = table && { problem: () => undefined, warning: () => undefined, resolveClass: table.resolveClass };
   for (const name of names) {
-    const r = loadFlow(`${name}.yaml`, flowsDir);
+    const r = loadFlow(`${name}.yaml`, flowsDir, undefined, undefined, rules);
     if (!r.ok) {
       unreadableFlows.push(name);
       continue;

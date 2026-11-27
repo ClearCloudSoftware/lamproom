@@ -33,6 +33,7 @@ export const SECTIONS: { href: string; title: string; icon: LucideIcon; pages?: 
     pages: [
       { href: '/settings/agents', title: 'Agent CLIs' },
       { href: '/settings/agents/models', title: 'OpenCode models' },
+      { href: '/settings/agents/classes', title: 'Model classes' },
     ],
   },
   { href: '/settings/internal', title: 'Internal steps', icon: Cog },

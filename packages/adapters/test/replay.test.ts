@@ -63,3 +63,9 @@ test('stop() keeps the usage reported so far', async () => {
   for await (const ev of run.events) if (ev.type === 'usage') run.stop();
   assert.deepEqual((await run.result).usage, usage);
 });
+
+test('listModels returns the scripted models, or none', async () => {
+  const m = { id: 'x', name: 'X', efforts: ['low' as const] };
+  assert.deepEqual(await new ReplayProvider({ events: [], models: [m] }).listModels(), [m]);
+  assert.deepEqual(await new ReplayProvider({ events: [] }).listModels(), []);
+});

@@ -6,6 +6,9 @@
  * this module too; `app-settings.ts` reads and writes the app's file.
  */
 import { z } from 'zod';
+// This file, not the package index: the pages bundle this module, and the index reaches Node-only code.
+import { EFFORTS } from '../../core/src/ports/agent-provider.ts';
+import type { Effort, ProviderModel } from '../../core/src/ports/agent-provider.ts';
 
 /** What "Allow from now on" saves on a project (`approvals.ts` matches calls against it): every file edit, or commands starting with `prefix`. */
 export type ApprovalRule = { kind: 'edit' } | { kind: 'shell'; prefix: string };
@@ -21,10 +24,19 @@ export interface Settings { trust: Trust; budget: Budget; escalation: Escalation
 export type SettingKey = keyof Settings;
 /** The agent CLIs Lamproom drives (Agent Providers). */
 export type Harness = 'claude-code' | 'opencode';
-export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'] as const;
-export type Effort = (typeof EFFORTS)[number];
-/** How to run one agent CLI: `path` null for the one on PATH; `model` and `effort` null for the CLI's own. */
-export interface HarnessConfig { path: string | null; model: string | null; effort: Effort | null }
+export { EFFORTS };
+export type { Effort };
+/** How to run one agent CLI: `path` null for the one on PATH. */
+export interface HarnessConfig { path: string | null }
+/** How much a step is worth: a step asks for a class, and the profile in use says which model that is (Model Catalogue). */
+export const CLASSES = ['deep', 'standard', 'fast'] as const;
+export type ModelClass = (typeof CLASSES)[number];
+export const PROFILES = ['quality', 'balanced', 'budget'] as const;
+export type Profile = (typeof PROFILES)[number];
+/** What a class runs on under one profile for one CLI; `effort` null only for a model that has no levels. */
+export interface ClassCell { model: string; effort: Effort | null }
+/** `inUse`: the profile every run resolves through; a cell is null when the profile has no model of that CLI for the class. */
+export interface ModelClasses { inUse: Profile; profiles: Record<Profile, Record<ModelClass, Record<Harness, ClassCell | null>>> }
 /**
  * `projectsFolder`: where new projects are cloned; null for Lamproom's own, `DEFAULT_PROJECTS_FOLDER`.
  * `agents`: how each harness is run; app-wide, as it is about this machine, so no project overrides it.
@@ -35,6 +47,7 @@ export interface AppSettings extends Settings {
   projectsFolder: string | null;
   address: string;
   agents: Record<Harness, HarnessConfig>;
+  modelClasses: ModelClasses;
   internal: Record<InternalStep, InternalStepConfig>;
   opencodeModels: ApprovedModel[];
 }
@@ -111,8 +124,8 @@ export function modelWarning(id: string, approved: ApprovedModel[], catalogue: C
 }
 /** The steps Lamproom runs for itself, outside any flow (`internal/<id>/`, `internal-steps.ts`). */
 export type InternalStep = 'repo-analyst' | 'backlog-importer';
-/** How one internal step runs, for every project: `effort` null for the model's own; `budgetUsd` the most one run may spend. */
-export interface InternalStepConfig { adapter: Harness; model: string; effort: Effort | null; budgetUsd: number }
+/** How one internal step runs, for every project: the model comes from `class`; `budgetUsd` is the most one run may spend. */
+export interface InternalStepConfig { adapter: Harness; class: ModelClass; budgetUsd: number }
 /** A project's own values; a key present is overridden. In an override, `budget.capUsd` is a number above 0. */
 export type Overrides = Partial<Settings>;
 
@@ -175,6 +188,8 @@ export const INTERNAL_STEPS: Record<InternalStep, { name: string; text: string; 
   },
 };
 
+const claudeCell = (model: string, effort: Effort): Record<Harness, ClassCell | null> => ({ 'claude-code': { model, effort }, opencode: null });
+
 export const APP_DEFAULTS: AppSettings = {
   projectsFolder: null,
   address: 'http://localhost:3000',
@@ -184,12 +199,20 @@ export const APP_DEFAULTS: AppSettings = {
   memory: false,
   knowledge: { serena: false, graphify: false, rebuild: 'manual' },
   draft: false,
-  // PRD §5's default model; the effort is the model's own.
-  agents: { 'claude-code': { path: null, model: 'sonnet', effort: null }, opencode: { path: null, model: null, effort: null } },
-  // The importer on haiku, as backlog Story 7.3 runs it.
+  agents: { 'claude-code': { path: null }, opencode: { path: null } },
+  // Every OpenCode cell is null: nothing is approved on a fresh install. Balanced gives the internal steps what they ran on before.
+  modelClasses: {
+    inUse: 'balanced',
+    profiles: {
+      quality: { deep: claudeCell('opus', 'xhigh'), standard: claudeCell('opus', 'high'), fast: claudeCell('sonnet', 'medium') },
+      balanced: { deep: claudeCell('opus', 'high'), standard: claudeCell('sonnet', 'high'), fast: claudeCell('haiku', 'medium') },
+      budget: { deep: claudeCell('sonnet', 'high'), standard: claudeCell('sonnet', 'medium'), fast: claudeCell('haiku', 'low') },
+    },
+  },
+  // The analyst reads a repo (standard); the importer maps text (fast), as backlog Story 7.3 runs it on haiku.
   internal: {
-    'repo-analyst': { adapter: 'claude-code', model: 'sonnet', effort: null, budgetUsd: 0.5 },
-    'backlog-importer': { adapter: 'claude-code', model: 'haiku', effort: null, budgetUsd: 0.25 },
+    'repo-analyst': { adapter: 'claude-code', class: 'standard', budgetUsd: 0.5 },
+    'backlog-importer': { adapter: 'claude-code', class: 'fast', budgetUsd: 0.25 },
   },
   // None: an OpenCode step runs only on a model someone approved.
   opencodeModels: [],
@@ -231,14 +254,33 @@ const MODELS = {
   // As lr-run-agent checks it (`config.ts`): OpenCode's model ids are always providerID/modelID.
   opencode: z.string().trim().regex(/^[^\s/]+\/\S+$/, { error: HARNESSES.opencode.model }),
 };
-const harness = (h: Harness) => z.strictObject({ path: z.string().trim().regex(FOLDER_RE, { error: PROGRAM }).nullable(), model: MODELS[h].nullable(), effort: z.enum(EFFORTS).nullable() });
+const harness = z.strictObject({ path: z.string().trim().regex(FOLDER_RE, { error: PROGRAM }).nullable() });
 
 /** Each harness's settings, as the server checks them and the agents page checks each field. */
-export const HARNESS_SCHEMAS = { 'claude-code': harness('claude-code'), opencode: harness('opencode') };
+export const HARNESS_SCHEMAS = { 'claude-code': harness, opencode: harness };
 
-const internalOn = (h: Harness) => z.strictObject({ adapter: z.literal(h), model: MODELS[h], effort: z.enum(EFFORTS).nullable(), budgetUsd: cap });
-/** One internal step's settings: the model must suit the harness it runs on. */
-export const INTERNAL_STEP_SCHEMA = z.discriminatedUnion('adapter', [internalOn('claude-code'), internalOn('opencode')]);
+/** One internal step's settings. */
+export const INTERNAL_STEP_SCHEMA = z.strictObject({ adapter: z.enum(['claude-code', 'opencode']), class: z.enum(CLASSES), budgetUsd: cap });
+
+/** One cell's shape; whether the model exists and takes the effort is `cellProblem`, which needs the CLI's list. */
+const cell = (h: Harness) => z.strictObject({ model: MODELS[h], effort: z.enum(EFFORTS).nullable() }).nullable();
+const classes = z.strictObject({ 'claude-code': cell('claude-code'), opencode: cell('opencode') });
+const profile = z.strictObject({ deep: classes, standard: classes, fast: classes });
+export const MODEL_CLASSES_SCHEMA = z.strictObject({ inUse: z.enum(PROFILES), profiles: z.strictObject({ quality: profile, balanced: profile, budget: profile }) });
+
+/**
+ * Why a cell can't be saved, or undefined. `offered` null: the CLI was never listed, so only the shape is checked.
+ * `approved`: OpenCode's approved ids, to tell an unapproved model from an approved one its list lacks.
+ */
+export function cellProblem(cli: Harness, cell: ClassCell, offered: ProviderModel[] | null, approved: string[] = []): string | undefined {
+  if (!offered) return undefined;
+  const m = offered.find((x) => x.id === cell.model);
+  if (!m && cli === 'opencode' && approved.includes(cell.model)) return `${cell.model} is approved, but opencode does not list it on this machine`;
+  if (!m) return cli === 'opencode' ? `${cell.model} is not an approved model; approve it in ${MODELS_PAGE}` : `${cell.model} is not a ${cli} model on this machine`;
+  if (!cell.effort) return m.efforts.length ? `${cell.model} needs an effort level: ${m.efforts.join(', ')}` : undefined;
+  if (!m.efforts.includes(cell.effort)) return `${cell.model} has no ${cell.effort} effort; it takes ${m.efforts.join(', ') || 'none'}`;
+  return undefined;
+}
 
 const usd = z.number().nonnegative();
 /** The approved models, each id once. */
@@ -261,6 +303,7 @@ export const AppSettingsSchema = z.strictObject({
   projectsFolder: z.string().trim().regex(FOLDER_RE, { error: FOLDER }).nullable(),
   address: z.string().trim().regex(ADDRESS_RE, { error: ADDRESS }).transform((a) => a.replace(/\/+$/, '')),
   agents: z.strictObject(HARNESS_SCHEMAS),
+  modelClasses: MODEL_CLASSES_SCHEMA,
   internal: z.strictObject({ 'repo-analyst': INTERNAL_STEP_SCHEMA, 'backlog-importer': INTERNAL_STEP_SCHEMA }),
   opencodeModels: APPROVED_MODELS_SCHEMA,
 });

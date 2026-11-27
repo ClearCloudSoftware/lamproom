@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { NormalizedEvent, RunSpec } from '@lamproom/core';
+import { EFFORTS } from '@lamproom/core';
 import { ClaudeCodeProvider } from '../src/agent/claude/provider.ts';
 
 const live = { skip: !process.env.LAMPROOM_LIVE, timeout: 180_000 };
@@ -70,4 +71,10 @@ test('guard hook blocks a write outside the worktree under bypassPermissions', l
   assert.equal(existsSync(target), false);
   const denied = events.find((e) => e.type === 'tool_result' && !e.ok);
   assert.match(JSON.stringify(denied && 'output' in denied ? denied.output : ''), /Write outside the worktree/);
+});
+
+test('lists the models and their efforts without sending a prompt', live, async () => {
+  const models = await new ClaudeCodeProvider().listModels();
+  assert.ok(models.length > 0);
+  for (const m of models) assert.deepEqual(m.efforts, EFFORTS.filter((e) => m.efforts.includes(e)), m.id);
 });

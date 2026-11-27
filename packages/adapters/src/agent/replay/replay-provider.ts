@@ -6,7 +6,7 @@
  * See docs/Lamproom/Agent Providers/Replay Provider.md.
  */
 import { ZERO_USAGE } from '@lamproom/core';
-import type { AgentProvider, AgentRun, Capability, NormalizedEvent, RunResult, RunSpec, Usage } from '@lamproom/core';
+import type { AgentProvider, AgentRun, Capability, NormalizedEvent, ProviderModel, RunResult, RunSpec, Usage } from '@lamproom/core';
 
 export interface ReplayScript {
   events: NormalizedEvent[];
@@ -14,6 +14,8 @@ export interface ReplayScript {
   pid?: number;
   /** Delay between events, to simulate streaming. 0 (default) = instant, for tests. */
   streamDelayMs?: number;
+  /** What listModels() reports; none when absent. */
+  models?: ProviderModel[];
 }
 
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -30,6 +32,10 @@ export class ReplayProvider implements AgentProvider {
   /** Replay ignores the model; it echoes the logical id back. */
   resolveModel(logical: string): string {
     return logical;
+  }
+
+  async listModels(): Promise<ProviderModel[]> {
+    return this.script.models ?? [];
   }
 
   launch(_spec: RunSpec): AgentRun {

@@ -180,7 +180,7 @@ To write a flow by hand, put the steps under `steps:` and the routes under `edge
 ```yaml
 budget_usd: 6      # the most the whole loop may spend, every round included; 0 for no ceiling
 entry: implement   # every step has an edge into it, so name the first
-defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 30 } }
+defaults: { adapter: claude-code, class: standard, limits: { max_turns: 30 } }   # the profile in use picks the model
 steps:
   implement: { prompt: prompts/implement.md, produces: [notes], max_attempts: 3 }
   review:
@@ -444,13 +444,15 @@ To mix providers in one flow, set `adapter` per step in a `lr-run-flow` recipe. 
 
 ```yaml
 budget_usd: 5
-defaults: { adapter: claude-code, model: sonnet, limits: { max_turns: 30 } }
+defaults: { adapter: claude-code, class: standard, limits: { max_turns: 30 } }   # the profile in use picks the model
 steps:
   tests:
     adapter: opencode              # a second provider in the same flow
-    model: openrouter/deepseek/deepseek-v4.1-flash
+    model: openrouter/deepseek/deepseek-v4.1-flash   # model: names a model directly, in place of class:
     prompt: prompts/tests.md
 ```
+
+In a flow, a step asks for a **class** (`deep`, `standard` or `fast`) rather than a model. The profile in use (`quality`, `balanced` or `budget`), set under **Settings → Agents → Model classes**, gives the class a model and an effort level for each agent CLI. A step that names neither `class:` nor `model:`, here or in `defaults`, gets `standard`. `class:` may sit in `defaults`; `effort:` on a step wins over the table's. To pin one model, write `model:` instead of `class:`; `--check` then warns that the step names a model directly. A step cannot set both. A class with no model for that CLI in the profile, or an effort the model does not take, is refused before anything launches. See [[Model Catalogue]].
 
 Run it with `pnpm lr-run-flow --folder proj --task task.md delivery.yaml`, or check it first with `pnpm lr-run-flow --check delivery.yaml`. Each agent run may spend only what is left of the flow's `budget_usd`; the provider stops the run at that cap. For routes, gates, and resuming, see [Flow Design](#flow-design) and [Execution](#execution).
 
@@ -658,7 +660,7 @@ To run a flow in OpenSandbox, follow these steps:
    budget_usd: 1
    sandbox: { runtime: opensandbox, image: lamproom:sandbox }
    steps:
-     implement: { adapter: claude-code, model: sonnet, prompt: implement.md, produces: [notes] }
+     implement: { adapter: claude-code, class: standard, prompt: implement.md, produces: [notes] }
      check: { shell: pnpm test, produces: [check_output] }
    edges:
      - { from: implement, to: check }

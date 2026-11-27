@@ -86,7 +86,7 @@ test('the model list is fetched when stale, kept when fresh, and the saved one s
 
 test("a flow's opencode step: refused on a model not approved, run with a warning on an approved free one", () => {
   const data = temp();
-  const base = flowProject(DELIVERY); // its tests step runs on opencode, FLASH
+  const base = flowProject(DELIVERY.replace('model: sonnet', 'class: standard')); // its tests step runs on opencode, FLASH, named directly
   const errors = (r: ReturnType<typeof loadFlow>) => (r.ok ? [] : r.errors);
   assert.deepEqual(errors(loadFlow('flow.yaml', base, RUN_IN, undefined, modelRules(data))), [
     `flow.yaml: steps.tests.model: ${FLASH} is not an approved model; approve it in Settings → Agents → OpenCode models`,
@@ -94,9 +94,9 @@ test("a flow's opencode step: refused on a model not approved, run with a warnin
   value(updateAppSettings(data, { opencodeModels: [approve(FLASH, false)] }));
   const paid = loadFlow('flow.yaml', base, RUN_IN, undefined, modelRules(data));
   assert.ok(paid.ok, JSON.stringify(paid));
-  assert.deepEqual(paid.config.warnings, []);
+  assert.deepEqual(paid.config.warnings, ['steps.tests.model: names a model directly; class: lets the profile in use pick it']);
   value(updateAppSettings(data, { opencodeModels: [approve(FLASH, true, { in: 0, out: 0 })] }));
   const free = loadFlow('flow.yaml', base, RUN_IN, undefined, modelRules(data));
   assert.ok(free.ok, JSON.stringify(free));
-  assert.deepEqual(free.config.warnings, [`steps.tests.model: ${FLASH} is ${FREE_WARNING}`]);
+  assert.deepEqual(free.config.warnings, ['steps.tests.model: names a model directly; class: lets the profile in use pick it', `steps.tests.model: ${FLASH} is ${FREE_WARNING}`]);
 });

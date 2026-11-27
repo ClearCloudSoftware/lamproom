@@ -33,6 +33,7 @@ There is no mockup for this component. It is documented as architecture referenc
 - [[Normalized Event Envelope]] — the eight event kinds and `Usage`
 - [[Provider Capabilities]] — the capability flags, source by source
 - [[Logical Model Ids]] — `resolveModel` and the logical-to-native mapping
+- [[Model Catalogue]]: design, not built. Each agent CLI lists its models and the effort levels each takes (Claude's `supportedModels()`, OpenCode's model variants), for the model classes settings page.
 
 ## Behaviour and rules
 

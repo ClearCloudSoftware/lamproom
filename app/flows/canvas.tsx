@@ -19,7 +19,7 @@ import type { Edge, EdgeChange, EdgeProps, Node, NodeChange, NodeProps } from '@
 import '@xyflow/react/dist/base.css';
 import { useSelector } from '@tanstack/react-store';
 import { isRework } from '../../packages/core/src/flow/flow.ts';
-import { conditionOf, connect, edgesOf, effective, flowDef, layout, nextCondition, NODE_WIDTH, remove, setCondition, stepsOf, target } from './draft.ts';
+import { conditionOf, connect, edgesOf, effective, flowDef, layout, modelText, nextCondition, NODE_WIDTH, remove, setCondition, stepsOf, target } from './draft.ts';
 import type { Condition, Draft, Launch, Step } from './draft.ts';
 import { editor } from './editor.ts';
 import { GateIcon } from './icons.tsx';
@@ -141,7 +141,7 @@ export function Canvas({ draft, errors }: { draft: Draft; errors: string[] }) {
           data: {
             what: what(s, l),
             // An OpenCode id is provider/model: the model's own name is the part that tells steps apart.
-            chips: shell ? ['shell'] : [l.model?.split('/').at(-1) ?? 'no model', ...(l.effort ? [l.effort] : [])],
+            chips: shell ? ['shell'] : [modelText(draft, s).split('/').at(-1)!, ...(l.effort ? [l.effort] : [])],
             budget: !shell && l.limits?.budget_usd !== undefined ? `$${Number(l.limits.budget_usd).toFixed(2)}` : undefined,
             gate: s.gate === 'approval',
             bad: bad.has(id),

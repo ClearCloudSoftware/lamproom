@@ -86,6 +86,9 @@ Still open. As built, neither real adapter sets `outcome`; only Replay passes a 
 ### 12. The resolution table and what is recorded
 No table is written out; where it lives (adapter code, settings, DB) and what an unknown id does are unstated. `runs.model` could hold the logical id, the resolved native id, or the stream's reported id (`claude-fable-5-1` in the sample). `06` §15 says *"resolved"*. → [[Logical Model Ids]]
 
+> [!check] Half answered 2026-11-27, on `feature/model-classes`
+> The table now exists: an app-wide profile table maps class × profile × agent CLI to a model and an effort ([[Model Catalogue]]). A run records the class, the profile, the model and the effort in `flow.json`. Still open: there is no `runs` table, and `lr-run-agent`'s log still keeps the id as written in the YAML.
+
 **Decided 2026-10-18** (as built; recorded 2026-10-22), for the table: it lives in adapter code, as the `models` option of `OpencodeProvider`; Claude has none. Claude hands an unknown id to the CLI as is. OpenCode throws `no OpenCode model for logical id '<id>'` for an unmapped id without a `/`, which fails the run with exit 1; `lr-run-agent` refuses such an id before launch (`cli/src/config.ts`). What is recorded is still open: there is no `runs` table. `lr-run-agent`'s log keeps the id as written in the YAML, and the id Claude's CLI reports appears only in `raw` (`system/init`, `result.modelUsage`).
 
 ### 13. Draft mode target
@@ -176,6 +179,9 @@ Named once (architecture README table), nowhere else. → [[Adding A Provider]]
 `Effort` adds `xhigh` and `max`; the flow-designer mockup offers `low`/`medium`/`high` (also [[Flow Design Open Questions]] #15). How effort maps to Codex is unstated. → [[Logical Model Ids]]
 
 As built for OpenCode: the effort is sent as the model's variant only when the model has a variant of exactly that name; otherwise it is dropped without a message (`pickVariant` in `opencode/options.ts`; R7 in [[Run Agent CLI Decisions]]). Codex is still unstated.
+
+> [!check] Closed 2026-11-27, on `feature/model-classes`, for the check before launch
+> Each CLI now lists its models and the effort levels each takes ([[Model Catalogue]]), and a run refuses an effort its model does not list, in `--check` and before launch. The silent drop in `pickVariant` remains only when a model's variants change between that check and the launch; the port has no warning event for it ([[Deferred Work#Model classes]]).
 
 ### 30. Re-attaching after restart
 Restart recovery re-attaches by pid (`03` §7), but the port only gives a stream through `launch()`. How a new worker re-reads a live process's output is unstated. Same as [[Execution Open Questions]] #31. → [[Agent Providers Runtime]]
