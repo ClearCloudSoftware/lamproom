@@ -176,6 +176,7 @@ export function recordImport(
       skipped: 0,
       pages: 0,
       error: null,
+      note: null,
     })
     .run();
   const row = getImport(db, id);
@@ -206,13 +207,14 @@ export function finishImport(
   db: LamproomDb,
   id: string,
   state: Exclude<ImportState, 'running'>,
-  opts: { error?: string } = {},
+  opts: { error?: string; note?: string } = {},
 ): void {
   db.update(importsTable)
     .set({
       state,
       endedAt: new Date().toISOString(),
       error: opts.error ?? null,
+      note: opts.note ?? null,
     })
     .where(eq(importsTable.id, id))
     .run();

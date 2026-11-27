@@ -7,10 +7,13 @@
  *
  *   - Only `##` headings open tasks. `#` and `#### `+ do not.
  *   - Prose before the first `##` is dropped.
+ *   - Shape B: a `##` whose body has `- **Title** — text` bullets only groups
+ *     them; each bold bullet is a task (separators `-`, `–`, `—`, `:`), and
+ *     the sub-sections below attach to the last bullet.
  *   - Between one `##` and the next, the task's content is:
- *       * depth-3 heading "Acceptance criteria" → list items into
- *         ParsedTask.acceptanceCriteria.
- *       * depth-3 heading "Non-goals" / "Non goals" → list items into
+ *       * depth-3 heading "Acceptance criteria" / "AC" / "Done when" → list
+ *         items into ParsedTask.acceptanceCriteria.
+ *       * depth-3 heading "Non-goals" / "Out of scope" → list items into
  *         ParsedTask.nonGoals.
  *       * Any other content before the first special section → the body.
  *       * Content after the first special section is dropped (keep it simple;
@@ -47,17 +50,22 @@ interface MdastNode {
 }
 
 const EXPLICIT_ID_RE = /^(.*?)\s*\{#([a-z0-9][a-z0-9-]*)\}\s*$/;
-const ACCEPTANCE_RE = /^acceptance criteria$/i;
-const NON_GOALS_RE = /^non[- ]goals?$/i;
+const ACCEPTANCE_RE = /^(acceptance criteria|ac|done when)\s*:?$/i;
+const NON_GOALS_RE = /^(non[- ]goals?|out of scope)\s*:?$/i;
 const POLICY_NEVER = { trust: 'never' as const };
+
+/** A task before its key: what the file (or the importer agent) says. `id`: an explicit id, used as the key as is. */
+export interface UnkeyedTask {
+  title: string;
+  id?: string;
+  body?: string;
+  acceptanceCriteria?: string[];
+  nonGoals?: string[];
+}
 
 export function parseMarkdown(content: string, sourceId: SourceId): ParsedTask[] {
   const tree = unified().use(remarkParse).parse(content) as unknown as MdastNode;
   const children = tree.children ?? [];
-
-  const tasks: ParsedTask[] = [];
-  const seenKeys = new Set<string>();
-  const explicitIds = new Set<string>();
 
   // Find the spans: [startIndex, endIndex) of each task in `children`.
   const spans: Array<{ heading: MdastNode; from: number; to: number }> = [];
@@ -75,34 +83,77 @@ export function parseMarkdown(content: string, sourceId: SourceId): ParsedTask[]
     spans.push({ heading: children[currentStart]!, from: currentStart + 1, to: children.length });
   }
 
+  const raw: UnkeyedTask[] = [];
   for (const span of spans) {
-    const { title, explicitId } = splitTitleAndExplicitId(textContent(span.heading));
-    if (title === '') continue;
+    const { bodyNodes, acceptanceCriteria, nonGoals } = splitSpan(span.from, span.to, children);
+    const fields = {
+      ...(acceptanceCriteria.length > 0 && { acceptanceCriteria }),
+      ...(nonGoals.length > 0 && { nonGoals }),
+    };
 
-    const hint: ImportKeyHint = { titleSlug: slugify(title) };
-    if (explicitId !== undefined) {
-      if (explicitIds.has(explicitId)) {
-        throw new Error(`markdown source: duplicate explicit id '${explicitId}'`);
-      }
-      explicitIds.add(explicitId);
-      hint.upstream = explicitId;
+    const bullets = bodyNodes.flatMap((n) => (n.type === 'list' ? (n.children ?? []).filter(isBoldItem) : []));
+    if (bullets.length > 0) {
+      // Shape B: the heading only groups; the sub-sections belong to the last bullet.
+      bullets.forEach((item, i) => {
+        const { title, explicitId } = splitTitleAndExplicitId(textContent(item.children![0]!.children![0]!));
+        if (title === '') return;
+        const body = bulletBody(content, item);
+        raw.push({
+          title,
+          ...(explicitId !== undefined && { id: explicitId }),
+          ...(body !== undefined && { body }),
+          ...(i === bullets.length - 1 && fields),
+        });
+      });
+      continue;
     }
 
-    const { bodyNodes, acceptanceCriteria, nonGoals } = splitSpan(span.from, span.to, children);
-
+    const { title, explicitId } = splitTitleAndExplicitId(textContent(span.heading));
+    if (title === '') continue;
     const body = bodyNodes.length > 0 ? sliceSource(content, bodyNodes) : undefined;
-
-    const importKey = explicitId !== undefined ? explicitId : deriveImportKey(sourceId, hint, POLICY_NEVER, seenKeys);
-    if (explicitId !== undefined) seenKeys.add(importKey);
-
-    const task: ParsedTask = { importKey, title, _hint: hint };
-    if (body !== undefined) task.body = body;
-    if (acceptanceCriteria.length > 0) task.acceptanceCriteria = acceptanceCriteria;
-    if (nonGoals.length > 0) task.nonGoals = nonGoals;
-    tasks.push(task);
+    raw.push({ title, ...(explicitId !== undefined && { id: explicitId }), ...(body !== undefined && { body }), ...fields });
   }
 
-  return tasks;
+  return keyMarkdownTasks(raw, sourceId);
+}
+
+/**
+ * Keys tasks in file order: an explicit id is the key as is (two of the same throw), otherwise the title's slug,
+ * with `-2`, `-3` on repeats. The parser and the importer agent's output both go through here.
+ */
+export function keyMarkdownTasks(raw: UnkeyedTask[], sourceId: SourceId): ParsedTask[] {
+  const seenKeys = new Set<string>();
+  const explicitIds = new Set<string>();
+  return raw.map(({ title, id, body, acceptanceCriteria, nonGoals }) => {
+    const hint: ImportKeyHint = { titleSlug: slugify(title) };
+    if (id !== undefined) {
+      if (explicitIds.has(id)) throw new Error(`markdown source: duplicate explicit id '${id}'`);
+      explicitIds.add(id);
+      hint.upstream = id;
+      seenKeys.add(id);
+    }
+    const importKey = id ?? deriveImportKey(sourceId, hint, POLICY_NEVER, seenKeys);
+    const task: ParsedTask = { importKey, title, _hint: hint };
+    if (body !== undefined) task.body = body;
+    if (acceptanceCriteria !== undefined && acceptanceCriteria.length > 0) task.acceptanceCriteria = acceptanceCriteria;
+    if (nonGoals !== undefined && nonGoals.length > 0) task.nonGoals = nonGoals;
+    return task;
+  });
+}
+
+/** A list item that opens with bold text: `- **Title** — text`. */
+function isBoldItem(item: MdastNode): boolean {
+  const first = item.children?.[0];
+  return first?.type === 'paragraph' && first.children?.[0]?.type === 'strong';
+}
+
+/** The item's text after its bold title and separator, verbatim from the source. */
+function bulletBody(content: string, item: MdastNode): string | undefined {
+  const from = item.children![0]!.children![0]!.position?.end.offset;
+  const to = item.position?.end.offset;
+  if (from === undefined || to === undefined) return undefined;
+  const body = content.slice(from, to).replace(/^[ \t]*[-–—:]?[ \t]*/, '').trim();
+  return body === '' ? undefined : body;
 }
 
 function splitSpan(

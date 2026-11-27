@@ -52,6 +52,16 @@ The backlog's header lists a *"2026‑09‑09 import debugging"* session and *"n
 
 Everything it returns goes through the same `import_key` function as the parser (backlog 7.3). See [[Import Key]].
 
+## As built (2026-11-27)
+
+The agent runs first on every markdown import, and the parser is its fallback (Alex's call, 2026-11-17), so Open Questions #3 is settled that way.
+
+- **Where:** `startBacklogImport` in `packages/cli/src/backlog-import.ts`, called by `POST /api/import/markdown?project=<id>` with `{ content }` or `{ path }`. The project page's *Import markdown* button sends pasted or uploaded text.
+- **Run:** the internal flow `internal/backlog-importer/flow.yaml`, a run of the project like the repo analyst. The backlog's text is the run's task. The step may only write its `tasks` output. Its CLI, model and budget come from */settings → Internal steps*.
+- **Output:** the first `[` to the last `]` of `tasks`, checked with zod. An `import_key` is kept only when the backlog contains it word for word; otherwise the key comes from the title, the same way the parser makes it (`keyMarkdownTasks`).
+- **Fallback:** the parser reads the text when the run can't start (the folder lock, the monthly cap), fails, pauses, runs over 10 minutes, or writes no readable list. The import's `note` column says which happened, and the progress toast shows it.
+- **Storage:** one `imports` row with source `markdown`, upserted into `tasks` like a Jira import, and polled at `GET /api/imports/<id>`.
+
 ## Related
 
 - [[Intake And Import Index]]
