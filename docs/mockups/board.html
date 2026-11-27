@@ -41,6 +41,13 @@ svg{flex:0 0 auto;display:block}
 .tcount{color:var(--ink-3);font-size:12px}
 .wflink{font-size:12px;color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--line-2)}
 .wflink:hover{color:var(--ink);border-color:var(--ink)}
+.ef{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);margin-right:10px}
+.ef select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line-2);border-radius:0;padding:2px 6px;max-width:220px}
+.ef select.on{border-color:var(--ink);background:var(--surface-2)}
+.tf{display:flex;gap:2px;align-items:center;font-size:12px}
+.tf button{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid transparent;color:var(--ink-2)}
+.tf button:hover{border-color:var(--line-2)}
+.tf button[aria-pressed="true"]{border-color:var(--ink);color:var(--ink);background:var(--surface-2)}
 
 /* ── buttons ──────────────────────────────────────────────────── */
 .act{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line-2);padding:3px 11px;
@@ -107,6 +114,24 @@ svg{flex:0 0 auto;display:block}
 .col-who{font-size:10.5px;color:var(--ink-3);margin-top:2px}
 .col-means{font-family:var(--sans);font-size:11.5px;color:var(--ink-3);margin-top:4px;line-height:1.35}
 .col-body{flex:1;padding:8px 8px 40px;display:flex;flex-direction:column;gap:7px}
+.grp{display:flex;flex-direction:column;gap:6px;padding:0 6px 6px;background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--ink-3)}
+.grp.is-epic{background:var(--surface-3);border-color:var(--line-2);border-left-color:var(--ink)}
+.grp .grp{border-left-width:3px}
+.grp-head{display:grid;gap:5px;width:100%;min-width:0;margin:0 -6px;width:calc(100% + 12px);padding:7px 8px 6px;text-align:left;font-size:11px;color:var(--ink-2);border-bottom:1px solid var(--line)}
+.grp.is-epic>.grp-head{border-bottom-color:var(--line-2)}
+.grp-head .row{display:flex;align-items:center;gap:6px;min-width:0}
+.grp-head .row svg{flex-shrink:0}
+.grp-head .open{display:flex;align-items:center;gap:6px;min-width:0;flex:1;text-align:left;color:inherit}
+.grp-head .open:hover .t{text-decoration:underline}
+.grp-head.is-sel .t{box-shadow:inset 0 -2px 0 var(--ink)}
+.grp-head .t{min-width:0;flex:1;font-family:var(--sans);font-size:12.5px;font-weight:600;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp-head .kbar{max-width:140px}
+.ttag{flex-shrink:0;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:0 5px;line-height:15px;border:1px solid var(--ink-3);color:var(--ink-2)}
+.ttag.epic{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.grp-head .kseg:not(.done):not(.running),.kc.is-story .kseg:not(.done):not(.running),.kc.is-epic .kseg:not(.done):not(.running){background:var(--line-2)}
+.kc.is-story{background:var(--surface-2);border-left:3px solid var(--ink-3)}
+.kc.is-epic{background:var(--surface-3);border-left:3px solid var(--ink)}
+.grp-loose{font-size:10.5px;color:var(--ink-3);letter-spacing:.06em;padding:4px 0 0;border-top:1px solid var(--line)}
 .col-empty{font-size:11px;color:var(--ink-3);padding:10px 4px;border:1px dashed var(--line-2);text-align:center}
 .col.is-agent,.col.is-agent .col-head{background:var(--surface-2)}
 .col-who .tag{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:0 5px;border:1px solid var(--line-2);color:var(--ink-2);margin-right:6px}
@@ -205,7 +230,9 @@ svg{flex:0 0 auto;display:block}
     <div class="brand">lamproom<em>/</em><span>billing-svc</span><em>/</em><b>board</b></div>
     <span class="tcount" id="tcount"></span>
     <span class="sp"></span>
-    <a class="wflink" href="workflows.html"><span class="mute">types</span> bug · task · story<span class="sep">·</span>workflows</a>
+    <label class="ef" id="ef"></label>
+    <div class="tf" id="tf" role="group" aria-label="Show types"></div>
+    <a class="wflink" href="types.html">statuses and types</a>
   </header>
 
   <div class="source" id="source"></div>
@@ -245,12 +272,15 @@ const LU = {
   alert: luc('<path d="M12 3 2 21h20Z"/><path d="M12 9v5"/><path d="M12 17v.5"/>', 13),
   check: luc('<path d="M20 6 9 17l-5-5"/>', 13),
   layers: luc('<path d="m12 2 10 5-10 5L2 7Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/>', 11),
+  chevR: luc('<path d="m9 18 6-6-6-6"/>', 12),
+  chevD: luc('<path d="m6 9 6 6 6-6"/>', 12),
   flow : luc('<rect width="8" height="8" x="3" y="3"/><path d="M7 11v4h6"/><rect width="8" height="8" x="13" y="13"/>', 12),
 };
 /* task types: told apart by shape, not colour — colour is kept for alive / wants you / broken */
 const TY = {
   bug  : luc('<path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/>', 12),
   task : luc('<rect width="18" height="18" x="3" y="3"/><path d="m9 12 2 2 4-4"/>', 12),
+  epic : luc('<path d="m8 3 4 8 5-5 5 15H2L8 3z"/>', 12),
   story: luc('<path d="M12 7v14"/><path d="M3 18V3h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6v15h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>', 12),
 };
 
@@ -262,7 +292,7 @@ const COLS = [
   { id:'needs-context',   owner:'agent', who:'triage agent, repo-analyst', means:'The ask is clear, but the agent couldn’t find where in the code to start or which rule applies.' },
   { id:'ready-for-agent', owner:'you',   who:'you manage',                 means:'You want an agent on it. The triage agent checks it first; then Start run.' },
   { id:'ready-for-human', owner:'you',   who:'you manage',                 means:'Needs hands an agent shouldn’t have: secrets, production, a judgement call.' },
-  { id:'in tasks',        owner:'tasks', who:'its tasks',                  means:'A story split into tasks. It moves to done by itself when its last task is.' },
+  { id:'in tasks',        owner:'tasks', who:'its tasks',                  means:'A story split into tasks, or an epic into stories. It moves on by itself when its last child is done.' },
   { id:'in progress',     owner:'agent', who:'the run',                    means:'A run is working through the flow. Cards come and go with the run.' },
   { id:'done',            owner:'you',   who:'you, or a finished run',     means:'Finished: a run landed it, or you closed it yourself.' },
   { id:'wontfix',         owner:'you',   who:'you manage',                 means:'Will not be actioned.' },
@@ -337,7 +367,7 @@ const SEED = [
     title:'Refund webhook times out on large accounts',
     body:'charge.refunded handling takes over 30s for some accounts and Stripe gives up.',
     asked:'Roughly how many invoices does an affected account have — hundreds or tens of thousands?' },
-  { k:'webhook-retry', gh:214, bd:'billing-4k2', col:'needs-context', by:'maria-k', age:6*D,
+  { k:'webhook-retry', parent:'reliable-writes', gh:214, bd:'billing-4k2', col:'needs-context', by:'maria-k', age:6*D,
     title:'Retry webhook redelivery with backoff',
     body:'When our handler 5xxs, Stripe redelivers on its own schedule. We want our own retry with backoff so a short outage doesn’t drop events.',
     missing:['Which backoff policy applies — the one in ADR-0007, or Stripe’s own schedule?', 'Where retries should live: src/webhooks/stripe.ts, or the job queue in src/jobs/'],
@@ -346,7 +376,14 @@ const SEED = [
     title:'Move proration maths into the ledger package',
     body:'Proration is computed in three places (checkout, plan change, refunds) and they disagree by a cent on odd day counts.',
     missing:['Does packages/ledger own currency rounding, or does each caller round?', 'Which of the three call sites is the behaviour to keep?'] },
-  { k:'refund-idempotency', gh:228, bd:'billing-7tq', col:'ready-for-agent', by:'you', age:2*D,
+  { k:'payments-reliability', gh:213, bd:'billing-e7k', type:'epic', col:'in tasks', by:'dmitri-v', age:10*D,
+    title:'Payments never get lost or doubled',
+    body:'Every Stripe event is handled exactly once, and every write endpoint is safe to retry.' },
+  { k:'reliable-writes', parent:'payments-reliability', gh:215, bd:'billing-s2w', type:'story', col:'in tasks', by:'dmitri-v', age:8*D, branch:'story/215-reliable-writes',
+    title:'Retrying a request or a webhook never changes the result twice',
+    body:'Clients retry on timeouts and Stripe redelivers webhooks. Neither may charge, refund or record anything twice.',
+    accept:'A replayed refund request and a redelivered webhook each leave exactly one record.' },
+  { k:'refund-idempotency', parent:'reliable-writes', gh:228, bd:'billing-7tq', col:'ready-for-agent', by:'you', age:2*D,
     title:'Add an idempotency key to POST /refunds',
     body:'Accept an Idempotency-Key header and return the first response for repeats within 24h, the way POST /charges already does.' },
   { k:'amount-minor', parent:'bill-in-currency', gh:224, bd:'billing-5nw', col:'ready-for-agent', by:'maria-k', age:3*D,
@@ -361,10 +398,16 @@ const SEED = [
   { k:'e2e-chf-jpy', gh:240, bd:'billing-t6s', col:'backlog', by:'story-breakdown', parent:'bill-in-currency', age:20*H,
     title:'Add CHF and JPY customers to the invoice end-to-end tests',
     body:'One customer per currency through checkout, invoice, PDF and the API.' },
-  { k:'bill-in-currency', gh:218, bd:'billing-mc1', type:'story', col:'in tasks', by:'maria-k', age:5*D,
+  { k:'intl-billing', gh:212, bd:'billing-e1x', type:'epic', col:'in tasks', by:'maria-k', age:12*D,
+    title:'International billing',
+    body:'Sell outside the US: local currencies, the right legal entity on each invoice, and local tax rules.' },
+  { k:'bill-in-currency', parent:'intl-billing', gh:218, bd:'billing-mc1', type:'story', col:'in tasks', by:'maria-k', age:5*D, branch:'story/218-bill-in-currency', acceptance:true,
     title:'Bill customers in their own currency',
     body:'Invoices, API responses and PDFs assume dollars and cents. Swiss customers see “$” on franc invoices; Japanese customers see amounts a hundred times too large.',
     accept:'A CHF and a JPY customer each get a correct invoice, PDF and API response.' },
+  { k:'multi-entity', parent:'intl-billing', gh:241, bd:'billing-r4e', type:'story', col:'backlog', by:'maria-k', age:1*D,
+    title:'Invoice from more than one legal entity',
+    body:'Customers in the EU are billed by the Dublin entity, everyone else by Delaware. Invoices, numbering and tax rules differ per entity.' },
   { k:'rotate-key', gh:221, bd:'billing-3jd', col:'ready-for-human', by:'ops-bot', age:1*D,
     title:'Rotate the Stripe restricted key in production',
     body:'The key is 13 months old. Agents never get production secrets: rotate it in the Stripe dashboard, update the vault, redeploy.' },
@@ -398,7 +441,7 @@ const INBOUND = [
 let st;
 function load(prov) {
   const now = Date.now();
-  st = { prov, cards: [], queue: [], sel: null, open: null, colCur: 0, showAgent: false,
+  st = { prov, cards: [], queue: [], sel: null, open: null, colCur: 0, showAgent: false, tf: st ? st.tf : 'all', ef: st ? st.ef : '', expand: new Set(),
          sync: { last: now - 4*M, state: 'ok', reject: false, inboundDone: false },
          conflicts: [], mdLast: now - 14*M };
   for (const s of SEED) {
@@ -427,6 +470,31 @@ const kids = s => st.cards.filter(c => c.parent === s.k);
 const closed = c => c.col === 'done' || c.col === 'wontfix';
 const P = () => PROV[st.prov];
 const inCol = id => st.cards.filter(c => c.col === id);
+const epicOf = c => { for (let x = c; x; x = x.parent && card(x.parent)) if (x.type === 'epic') return x.k; return ''; };
+// both filters only change what you see; with an epic picked, its stories and tasks show and the epic itself doesn't
+const inView = id => inCol(id).filter(c => (st.tf === 'all' || c.type === st.tf) && (!st.ef || (c.k !== st.ef && epicOf(c) === st.ef)));
+// a column groups cards under their epic, then their story; cards with neither come last
+function grouped(id) {
+  const epics = new Map(), stories = new Map(), loose = [];
+  const get = (m, k, v) => m.get(k) || m.set(k, v()).get(k);
+  for (const c of inView(id)) {
+    const p = c.parent && card(c.parent);
+    if (p && p.type === 'story') {
+      const e = !st.ef && p.parent && card(p.parent);
+      get(e ? get(epics, e.k, () => ({ cards: [], stories: new Map() })).stories : stories, p.k, () => []).push(c);
+    } else if (p && p.type === 'epic' && !st.ef) get(epics, p.k, () => ({ cards: [], stories: new Map() })).cards.push(c);
+    else loose.push(c);
+  }
+  const headed = new Set([...epics.keys(), ...stories.keys(), ...[...epics.values()].flatMap(v => [...v.stories.keys()])]);
+  for (const e of epics.values()) e.cards = e.cards.filter(c => !headed.has(c.k));
+  loose.splice(0, loose.length, ...loose.filter(c => !headed.has(c.k)));
+  const fold = k => !st.expand.has(id + ':' + k);   // folded unless you opened it
+  const byId = (a, b) => a.s.gh - b.s.gh;   // same order in every column
+  const sg = m => [...m].map(([k, cards]) => ({ s: card(k), cards, folded: fold(k) })).sort(byId);
+  return { epics: [...epics].map(([k, v]) => ({ s: card(k), cards: v.cards, stories: sg(v.stories), folded: fold(k) })).sort(byId), stories: sg(stories), loose };
+}
+const navCards = id => { const g = grouped(id), open = x => x.folded ? [] : x.cards;
+  return [...g.epics.flatMap(e => e.folded ? [] : [...e.stories.flatMap(open), ...e.cards]), ...g.stories.flatMap(open), ...g.loose]; };
 const runCost = r => r ? r.steps.reduce((a, s, i) => a + (s.ms / M) * CLOCK * FLOW[i].rate, 0) : 0;
 
 /* ── moving a card: the one rule set every path goes through (drag, keys, panel) ── */
@@ -434,9 +502,10 @@ const runCost = r => r ? r.steps.reduce((a, s, i) => a + (s.ms / M) * CLOCK * FL
 function canMove(c, to, who = 'you') {
   if (!c || c.col === to) return 'same';
   if (who !== 'you') return '';
-  if (c.col === 'in tasks') return 'A story moves with its tasks: it goes to done by itself when the last one is.';
+  if (c.col === 'in tasks') return 'A story moves with its tasks: when the last one is done it runs story-land, and you land its branch.';
   if (to === 'in tasks') return 'Only a story goes in tasks, when you approve its split.';
-  if (c.col === 'in progress') return `The run owns this card (${c.run ? c.run.id : ''}). Open it to approve, or cancel the run from the task.`;
+  if (c.col === 'in progress') return `The run owns this card (${c.run ? c.run.id : 'story-land'}). Open it to approve, or cancel the run from the task.`;
+  if (c.type === 'epic' && !human(to) || c.type === 'epic' && to === 'ready-for-agent') return 'An epic runs no flow: open one of its stories and run that.';
   if (to === 'in progress') return 'Only a run puts a card in progress: open a ready-for-agent card and press Start run.';
   if (!human(to)) return `Agents set ${to}. Move the card to ready-for-agent; the triage agent flags it if something is missing.`;
   return '';
@@ -538,6 +607,7 @@ function resolve(k, keepMine) {
 /* ── runs: the smallest engine that walks the flow ── */
 function startRun(c) {
   if (c.col !== 'ready-for-agent' || c.checkAt) return;
+  if (c.type === 'story') { toast('story-breakdown isn’t simulated in this mockup'); return; }
   if (st.prov === 'bd' && c.blockedBy && card('amount-minor').col !== 'done') { toast(`bd ready skips this: blocked by ${c.blockedBy}`); return; }
   const now = Date.now();
   c.run = { id: 'lr-04' + (13 + st.cards.filter(x => x.run).length), steps: FLOW.map(() => ({ state: 'pending', ms: 0 })), at: 0, stepStart: now };
@@ -558,7 +628,8 @@ function approve(c) {
 function tick() {
   const now = Date.now(); let changed = false;
   for (const s of inCol('in tasks')) { const k = kids(s);
-    if (k.length && k.every(closed) && k.some(x => x.col === 'done')) { agentMove(s, 'done', 'lamproom', 'last task done'); changed = true; } }
+    if (s.type === 'epic') { if (k.length && k.every(closed) && k.some(x => x.col === 'done')) { agentMove(s, 'done', 'lamproom', 'last story done'); changed = true; } continue; }
+    if (k.length && k.every(closed) && k.some(x => x.col === 'done')) { s.landing = true; agentMove(s, 'in progress', 'lamproom', 'last task done · story-land runs'); changed = true; } }
   for (const c of st.cards) {
     const r = c.run; if (!r || c.col !== 'in progress') continue;
     const s = r.steps[r.at]; if (s.state !== 'running') continue;
@@ -630,6 +701,9 @@ const $ = id => document.getElementById(id);
 function render() {
   const p = P();
   $('tcount').textContent = `${st.cards.length} issues · ${inCol('in progress').length} running`;
+  const epics = st.cards.filter(c => c.type === 'epic');
+  $('ef').innerHTML = `${TY.epic}<select data-ef class="${st.ef ? 'on' : ''}" aria-label="Show one epic"><option value="">all epics</option>${epics.map(e => `<option value="${e.k}" ${st.ef === e.k ? 'selected' : ''}>${esc(P().id(e))} ${esc(e.title)}</option>`).join('')}</select>`;
+  $('tf').innerHTML = ['all', 'bug', 'task', 'story', 'epic'].map(t => `<button data-tf="${t}" aria-pressed="${st.tf === t}">${TY[t] || ''}${t}</button>`).join('');
   renderSource(); renderZone(); renderBoard(); renderPanel(); renderStatus(); renderMock();
 }
 function syncText() {
@@ -658,7 +732,7 @@ function renderSource() {
 function agentsHtml() {
   const ids = COLS.filter(c => c.owner === 'agent').map(c => c.id);
   const cards = st.cards.filter(c => ids.includes(c.col)).length;
-  const gates = st.cards.filter(c => c.run && c.col === 'in progress' && c.run.steps[c.run.at].state === 'hold').length;
+  const gates = st.cards.filter(c => c.col === 'in progress' && (c.landing || (c.run && c.run.steps[c.run.at].state === 'hold'))).length;
   return st.showAgent
     ? `<button class="act" data-agents aria-pressed="true">Hide agent statuses <kbd>v</kbd></button>`
     : `<span class="agents">${cards} cards in agent statuses${gates ? ` · <span class="w">${gates} waiting on you</span>` : ''}<button class="act" data-agents aria-pressed="false">Show <kbd>v</kbd></button></span>`;
@@ -680,12 +754,28 @@ function renderZone() {
       <div class="ccard-a"><button class="act" data-keep="${x.k}">Keep Lamproom’s · ${esc(x.mine)}</button><button class="act wait" data-take="${x.k}">Take ${esc(x.who)}’s · ${esc(x.theirs)}</button></div>
     </div>`; }).join('');
 }
+function kidBar(s) {
+  const k = kids(s), d = k.filter(x => x.col === 'done').length;
+  return { d, n: k.length, bar: `<span class="kbar">${k.map(x => `<span class="kseg ${x.col === 'done' ? 'done' : x.col === 'in progress' ? 'running' : ''}"></span>`).join('')}</span>` };
+}
+function storyBar(s) { const b = kidBar(s); return `${b.bar}<div class="kc-line">${LU.layers}${b.d} of ${b.n} ${s.type === 'epic' ? 'stories' : 'tasks'} done</div>`; }
+function groupHtml(col, g, inner) {
+  const b = kidBar(g.s), hidden = g.cards.length + (g.stories || []).reduce((a, x) => a + x.cards.length, 0);
+  return `<div class="grp${g.s.type === 'epic' ? ' is-epic' : ''}">
+    <div class="grp-head${st.sel === g.s.k ? ' is-sel' : ''}">
+      <span class="row"><button class="fold" data-fold="${col}:${g.s.k}" aria-expanded="${!g.folded}" title="${g.folded ? 'Show' : 'Hide'} what’s under this ${g.s.type}">${g.folded ? LU.chevR : LU.chevD}</button><button class="open" data-card="${g.s.k}" title="Open the ${g.s.type}"><span class="ttag ${g.s.type}">${g.s.type}</span>${esc(P().id(g.s))}<span class="t">${esc(g.s.title)}</span></button></span>
+      ${b.bar}
+      <span class="row">${b.d} of ${b.n} ${g.s.type === 'epic' ? 'stories' : 'tasks'} done · ${g.s.type}: ${esc(g.s.col)}${g.folded ? ` · ${hidden} hidden here` : ''}</span>
+    </div>
+    ${g.folded ? '' : inner}
+  </div>`;
+}
 function cardHtml(c) {
   const p = P(), r = c.run, locked = c.col === 'in progress' || c.col === 'in tasks';
   const pending = p.sync && st.queue.some(q => q.k === c.k);
   const gate = r && c.col === 'in progress' && r.steps[r.at].state === 'hold';
   const running = r && c.col === 'in progress' && !gate;
-  const cls = ['kc', st.sel === c.k && 'is-sel', pending && 'is-pending', gate && 'is-gate', running && 'is-run', (c.col === 'done' || c.col === 'wontfix') && 'is-done', c.fresh && 'is-new'].filter(Boolean).join(' ');
+  const cls = ['kc', st.sel === c.k && 'is-sel', pending && 'is-pending', gate && 'is-gate', running && 'is-run', (c.col === 'done' || c.col === 'wontfix') && 'is-done', c.fresh && 'is-new', (c.type === 'story' || c.type === 'epic') && 'is-' + c.type].filter(Boolean).join(' ');
   const blocked = st.prov === 'bd' && c.blockedBy && c.col === 'ready-for-agent' && card('amount-minor').col !== 'done';
   let extra = '';
   if (c.remote) extra += `<div class="kc-line remote">${LU.down}${esc(c.remote)}</div>`;
@@ -705,26 +795,35 @@ function cardHtml(c) {
       ? `<div class="kc-line wait">${ICON.gate}review passed with 2 notes · waiting on you <span data-live="gate-${c.k}">${mock(Date.now() - r.gateSince)}</span></div>`
       : `<div class="kc-line run">${ICON.run}${FLOW[r.at].s} · <span data-live="el-${c.k}">${mock(r.steps[r.at].ms)}</span> · <span data-live="cost-${c.k}">${money(runCost(r))}</span></div>`;
   }
-  if (c.type === 'story') { const k = kids(c), d = k.filter(x => x.col === 'done').length;
-    extra += `<div class="kbar">${k.map(x => `<span class="kseg ${x.col === 'done' ? 'done' : x.col === 'in progress' ? 'running' : ''}"></span>`).join('')}</div><div class="kc-line">${LU.layers}${d} of ${k.length} tasks done</div>`; }
-  if (c.parent && card(c.parent)) extra += `<div class="kc-line pend">${TY.story}part of ${esc(p.id(card(c.parent)))}</div>`;
-  if (c.col === 'done' && c.spent != null) extra += `<div class="kc-line">${ICON.done}${money(c.spent)} · merged lr/task-${esc(c.k)}</div>`;
+  if (c.landing && c.col === 'in progress') extra += `<div class="kc-line wait">${ICON.gate}story-land · ${c.acceptance ? 'acceptance passed · ' : ''}land ${esc(c.branch)}: waiting on you</div>`;
+  if (c.type === 'epic') extra += storyBar(c);
+  if (c.type === 'story') extra += kids(c).length ? storyBar(c) : `<div class="kc-line">${LU.layers}not split yet · story-breakdown splits it into tasks</div>`;
+  if (c.col === 'done' && c.spent != null) extra += `<div class="kc-line">${ICON.done}${money(c.spent)} · merged lr/task-${esc(c.k)}${c.parent && card(c.parent) ? ` into ${esc(card(c.parent).branch)}` : ''}</div>`;
+  if (c.col === 'done' && c.type === 'story') extra += `<div class="kc-line">${ICON.done}landed ${esc(c.branch)}</div>`;
   if (pending) extra += `<div class="kc-line pend">${LU.up}not yet on ${esc(p.short)}</div>`;
   return `<button class="${cls}" data-card="${c.k}" draggable="${!locked}" aria-label="${esc(c.title)}">
-    <span class="kc-top"><span title="${c.type}">${TY[c.type]}</span>${esc(p.id(c))}<span class="sp"></span>${locked ? LU.lock : ''}${c.by !== 'you' ? esc(c.by) : ''}</span>
+    <span class="kc-top">${c.type === 'story' || c.type === 'epic' ? `<span class="ttag ${c.type}">${c.type}</span>` : `<span title="${c.type}">${TY[c.type]}</span>`}${esc(p.id(c))}<span class="sp"></span>${locked ? LU.lock : ''}${c.by !== 'you' ? esc(c.by) : ''}</span>
     <span class="kc-t">${esc(c.title)}</span>${extra}</button>`;
+}
+function colBody(id) {
+  const g = grouped(id);
+  const story = x => groupHtml(id, x, x.cards.map(cardHtml).join(''));
+  return g.epics.map(e => groupHtml(id, e, e.stories.map(story).join('') + e.cards.map(cardHtml).join(''))).join('')
+    + g.stories.map(story).join('')
+    + (!st.ef && (g.epics.length || g.stories.length) && g.loose.length ? '<div class="grp-loose">no epic or story</div>' : '')
+    + g.loose.map(cardHtml).join('');
 }
 function renderBoard() {
   $('board').innerHTML = COLS.map((col, i) => {
     if (!shown(col.id)) return '';
-    const cards = inCol(col.id), agent = col.owner === 'agent';
+    const cards = inView(col.id), agent = col.owner === 'agent';
     return `<section class="col${agent ? ' is-agent' : ''}${st.colCur === i ? ' is-cur' : ''}" data-col="${col.id}" aria-label="${esc(col.id)}">
       <div class="col-head">
         <div class="col-name">${agent ? `<span class="lk">${LU.lock}</span>` : col.owner === 'tasks' ? `<span class="lk">${LU.layers}</span>` : ''}${esc(col.id)} <span class="n">${cards.length}</span></div>
         <div class="col-who">${agent ? '<span class="tag">agent</span>' : ''}${esc(col.who)}</div>
         <div class="col-means">${esc(col.means)}</div>
       </div>
-      <div class="col-body">${cards.map(cardHtml).join('') || `<div class="col-empty">${agent ? 'nothing here' : 'drop a card here'}</div>`}</div>
+      <div class="col-body">${colBody(col.id) || `<div class="col-empty">${agent ? 'nothing here' : 'drop a card here'}</div>`}</div>
     </section>`;
   }).join('');
 }
@@ -742,9 +841,19 @@ function renderPanel() {
         <div class="p-acts"><button class="act primary" data-to="ready-for-agent">Context is enough · ready-for-agent</button></div>`
       : `<div class="p-acts"><button class="act primary" data-analyst ${c.analyst ? 'disabled' : ''}>${LU.search}${c.analyst ? 'repo-analyst is reading…' : 'Gather with repo-analyst'}</button><button class="act" data-to="ready-for-human">A person should answer</button></div>
          <span class="why">repo-analyst reads the repo read-only (about $0.04) and attaches what it finds. It doesn’t move the card — you decide whether it’s enough.</span>`}</div>`;
-  if (c.type === 'story') state = `<div class="p-sec"><span class="lbl">its tasks · split by story-breakdown v1, approved by you</span>
+  if (c.type === 'epic') state = `<div class="p-sec"><span class="lbl">its stories</span>
+      <ul class="hist kids">${kids(c).map(x => `<li><span>${TY[x.type]}</span><span>${esc(p.id(x))} ${esc(x.title)}</span><span class="h-w">${esc(x.col)}${kids(x).length ? ` · ${kids(x).filter(y => y.col === 'done').length}/${kids(x).length} tasks` : ' · not split'}</span></li>`).join('')}</ul>
+      <span class="why">An epic only groups stories. It runs no flow and has no branch: each story lands its own. It moves to done when its last story does.</span></div>`;
+  else if (c.type === 'story' && !kids(c).length) state = `<div class="p-sec"><span class="lbl">not split yet</span>
+      <span class="why">Move it to ready-for-agent and start it: story-breakdown researches, proposes a list of tasks, and stops for you to approve the split. Then the story goes to in tasks and its tasks show up grouped under it. (The breakdown run isn’t simulated in this mockup.)</span></div>`;
+  else if (c.type === 'story') state = `<div class="p-sec"><span class="lbl">its tasks · split by story-breakdown v1, approved by you</span>
       <ul class="hist kids">${kids(c).map(x => `<li><span>${TY[x.type]}</span><span>${esc(p.id(x))} ${esc(x.title)}</span><span class="h-w">${esc(x.col)}</span></li>`).join('')}</ul>
-      <span class="why">Accepted when: ${esc(c.accept)} It moves to done by itself when the last task is done.</span></div>`;
+      <span class="why">Accepted when: ${esc(c.accept)}</span>
+      <span class="why">Branch ${esc(c.branch)}: every task branches off it and lands into it. When the last task is done, story-land runs ${c.acceptance ? 'an acceptance review against these criteria, then ' : ''}the land gate.</span></div>`;
+  if (c.landing && c.col === 'in progress') state = `<div class="p-sec"><span class="lbl">story-land · ${esc(c.branch)}</span>
+      <div class="p-ask">${c.acceptance ? `Acceptance review passed: ${esc(c.accept)} ` : 'No acceptance review: this story didn’t ask for one. '}The branch is up to date with main and merges cleanly.</div>
+      <div class="p-acts"><button class="act wait" data-land>Land ${esc(c.branch)}</button></div>
+      <span class="why">The same approval as landing a task. The default branch sees the story only now.</span></div>`;
   if (c.col === 'needs-info' && c.asked) state = `<div class="p-sec"><span class="lbl">asked ${esc(c.waitOn || '')} · ${c.waited ? ago(Date.now() - c.waited) : ''}</span><div class="p-ask">${esc(c.asked)}</div></div>`;
   if (c.col === 'ready-for-agent') state = `<div class="p-sec"><span class="lbl">run it</span>
       <div class="p-acts"><button class="act primary" data-start ${blocked || c.checkAt ? 'disabled' : ''}>${LU.play}Start run</button></div>
@@ -768,9 +877,9 @@ function renderPanel() {
     <div class="p-sec"><span class="lbl">history</span><ol class="hist">${c.hist.slice().reverse().map(h => `<li><span><span class="h-w">${ago(h.at)} · ${esc(h.who)}${h.remote ? ` on ${esc(p.short)}` : ''}</span></span><span>${esc(h.what)}${h.pending ? ' <span style="color:var(--ink-2)">· not yet on ' + esc(p.short) + '</span>' : ''}</span>${h.note ? `<span class="h-q sans">“${esc(h.note)}”</span>` : ''}${h.cmd ? `<code>${esc(h.cmd)}</code>` : ''}</li>`).join('')}</ol></div>`;
 }
 function renderStatus() {
-  const gates = st.cards.filter(c => c.run && c.col === 'in progress' && c.run.steps[c.run.at].state === 'hold').length;
+  const gates = st.cards.filter(c => c.col === 'in progress' && (c.landing || (c.run && c.run.steps[c.run.at].state === 'hold'))).length;
   const p = P();
-  $('statusbar').innerHTML = `billing-svc<span class="sep">·</span>${st.cards.length} issues<span class="sep">·</span>${inCol('in progress').length} in progress<span class="sep">·</span>${gates ? `<span class="w">${gates} waiting on you</span>` : 'nothing waiting on you'}<span class="sep">·</span>${p.sync ? `${esc(p.short)} sync on Sync now` : 'no sync: BACKLOG.md is the source'}<span class="sep">·</span>×${CLOCK} clock<span class="sp"></span>h l columns · j k cards · ↵ open · [ ] move · v agent statuses${p.sync ? ' · s sync' : ''} · Esc close`;
+  $('statusbar').innerHTML = `billing-svc<span class="sep">·</span>${st.cards.length} issues<span class="sep">·</span>${inCol('in progress').length} in progress<span class="sep">·</span>${gates ? `<span class="w">${gates} waiting on you</span>` : 'nothing waiting on you'}<span class="sep">·</span>${p.sync ? `${esc(p.short)} sync on Sync now` : 'no sync: BACKLOG.md is the source'}<span class="sep">·</span>×${CLOCK} clock<span class="sp"></span>h l columns · j k cards · ↵ open · [ ] move · v agent statuses · t types · e epics${p.sync ? ' · s sync' : ''} · Esc close`;
 }
 function renderMock() {
   const b = (k, l) => `<button data-prov="${k}" aria-pressed="${st.prov === k}">${l}</button>`;
@@ -796,6 +905,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest('button'); if (!t) return;
   const d = t.dataset;
   if (d.card) { st.sel = d.card; st.open = d.card; const c = card(d.card); c.remote = null; st.colCur = COL[c.col].i; render(); return; }
+  if (d.fold) { st.expand.has(d.fold) ? st.expand.delete(d.fold) : st.expand.add(d.fold); render(); return; }
   if (d.close !== undefined) { st.open = null; render(); return; }
   if (d.sync !== undefined) return syncNow();
   if (d.q !== undefined) { st.qOpen = !st.qOpen; render(); return; }
@@ -805,8 +915,10 @@ document.addEventListener('click', e => {
   if (d.to && st.open) return move(card(st.open), d.to);
   if (d.start !== undefined) return startRun(card(st.open));
   if (d.approve !== undefined) return approve(card(st.open));
+  if (d.land !== undefined) { const c = card(st.open); c.landing = false; c.col = 'done'; record(c, 'in progress', 'done', 'you'); c.hist[c.hist.length - 1].note = `landed ${c.branch}`; toast(`${c.branch} landed · ${P().id(c)} is done`); render(); return; }
   if (d.analyst !== undefined) { card(st.open).analyst = Date.now(); toast('repo-analyst is reading src/ and docs/adr/ · read-only'); render(); return; }
   if (d.agents !== undefined) return toggleAgents();
+  if (d.tf) return setTf(d.tf);
   if (d.prov) { load(d.prov); render(); toast(`Issue provider: ${P().name}`); return; }
   if (d.reject !== undefined) { st.sync.reject = !st.sync.reject; if (!st.sync.reject && st.sync.state === 'error') st.sync.state = 'ok'; render(); toast(st.sync.reject ? 'The next sync will fail' : 'The next sync will go through'); return; }
   if (d.ext !== undefined) {
@@ -836,7 +948,7 @@ document.addEventListener('drop', e => { const col = e.target.closest('.is-refus
 
 document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
-  const colCards = () => inCol(COLS[st.colCur].id);
+  const colCards = () => navCards(COLS[st.colCur].id);
   const k = e.key;
   if (k === 'h' || k === 'ArrowLeft' || k === 'l' || k === 'ArrowRight') {
     const step = k === 'h' || k === 'ArrowLeft' ? -1 : 1;
@@ -858,11 +970,24 @@ document.addEventListener('keydown', e => {
     if (move(c, COLS[i].id)) { st.colCur = i; render(); }
   }
   else if (k === 'v') toggleAgents();
+  else if (k === 'e') { const E = ['', ...st.cards.filter(c => c.type === 'epic').map(c => c.k)]; setEf(E[(E.indexOf(st.ef) + 1) % E.length]); }
+  else if (k === 't') { const T = ['all', 'bug', 'task', 'story', 'epic']; setTf(T[(T.indexOf(st.tf) + 1) % T.length]); }
   else if (k === 's') syncNow();
   else if (k === 'a' && st.open) approve(card(st.open));
   else if (k === 'Escape') { if (st.open) { st.open = null; render(); } }
 });
 
+function setEf(k) {
+  st.ef = k;
+  if (st.sel && !inView(card(st.sel).col).some(c => c.k === st.sel)) st.sel = null;
+  render();
+}
+document.addEventListener('change', e => { if (e.target.matches('[data-ef]')) setEf(e.target.value); });
+function setTf(t) {
+  st.tf = t;
+  if (st.sel && !inView(card(st.sel).col).some(c => c.k === st.sel)) st.sel = null;
+  render();
+}
 function toggleAgents() {
   st.showAgent = !st.showAgent;
   // the cursor can't sit in a column that just disappeared

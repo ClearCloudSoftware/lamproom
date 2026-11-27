@@ -234,43 +234,61 @@ browser, or run `python3 -m http.server` in this folder.
   - **Beads**: syncs through git (`bd sync`). Dependencies are native, so a
     blocked `ready-for-agent` card can't start. The `bd` command lines are
     illustrative.
-  Every card carries its **type** as an icon: bug, task or story. The story
-  *Bill customers in their own currency* (#218) sits in its own `in tasks`
-  column. Its card shows how many of its five tasks are done, and each of
-  those tasks shows "part of #218". Nobody drags a story: it moves to `done`
-  by itself when its last task is done. In `BACKLOG.md`, type and story ride
+  A task or bug is a white card with its type icon. An epic or story is a
+  tinted container with an **EPIC** or **STORY** tag. In every column, cards
+  are grouped under their epic, then their story. Each header shows progress
+  and where the epic or story itself sits. The chevron folds a group, and the
+  title opens it. The epic *International billing* (#212) holds two stories:
+  #218 *Bill customers in their own currency*, which has been split into five
+  tasks, and #241, which hasn't been split yet. The epic and #218 sit in
+  `in tasks`. Nobody drags an epic or a story, and an epic never goes to
+  `ready-for-agent` because it runs no flow. Every epic and story group starts
+  folded. The epic picker at the top (`e` cycles it) shows one epic: the
+  epic level drops away and its stories and tasks stay, folded the same way.
+  A second epic, #213, holds the story #215. When its last task
+  is done it runs `story-land` in `in progress`, and you land its story
+  branch from the card to move it to `done`. The type filter at the top
+  right shows one type at a time; it only changes the view. In `BACKLOG.md`,
+  type and parent ride
   on the attribute block, as `{#amount-minor .task parent=bill-in-currency}`.
   Keys: `h`/`l` move between columns, `j`/`k` between cards, `↵` opens a card,
   `[`/`]` move the card to the next status you manage, `v` shows or hides
-  agent statuses, `s` syncs, `a` approves at a gate, `Esc` closes.
+  agent statuses, `t` cycles the type filter, `e` cycles the epic picker, `s` syncs, `a` approves at a
+  gate, `Esc` closes.
 
-- **[`workflows.html`](./workflows.html)**: a proposal for workflows and task
-  types (`/p/[slug]/settings/workflows`), following
-  [Task Types And Workflows](../Lamproom/Board/Task%20Types%20And%20Workflows.md).
-  - **Task types:** Bug, Task and Story are on the left. Each one picks a
-    **workflow**, which sets its statuses and the moves that carry a rule.
-    It also picks a **flow**, which sets what a run does. Bug and Task share
-    the `standard` workflow but run `bugfix` and `software-delivery`.
-  - **The graph:** statuses sit in Jira's three categories (to do, in
+- **[`types.html`](./types.html)**: a proposal for statuses and task
+  types (`/p/[slug]/settings/types`), following
+  [Task Types And Statuses](../Lamproom/Board/Task%20Types%20And%20Statuses.md).
+  - **Task types:** Bug, Task, Story and Epic are on the left. Each one picks only
+    the **flow** its runs use: `bugfix`, `software-delivery`, or
+    `story-breakdown` then `story-land`. An epic runs no flow, so the statuses
+    that lead to a run are faded for it. The statuses are one list for the
+    whole project.
+  - **The graph:** the project's statuses sit in Jira's three categories (to do, in
     progress, done), with agent statuses shaded. Arrows are drawn only for
-    moves with a rule. Clicking a status lights its moves and lists who makes
+    moves with a rule. Statuses and moves the selected type doesn't use
+    (`in tasks` for a bug or a task) are faded. Clicking a status lights its moves and lists who makes
     each one, and why, on the right. *Draw free moves* shows the hairball
     that drawing every arrow makes.
   - **New status** (`n`) asks for a name, a category, who manages it, which
-    workflows it joins and where its cards come from. It refuses a name that
+    types use it (all by default) and where its cards come from. It refuses a name that
     can't be a heading or a label. It warns when an agent status has no way
     in, or no agent to move cards out. The provider control at the bottom
     right changes what the new status becomes: a `##` section in
-    `BACKLOG.md`, a GitHub label, a label on a Beads status, or a mapping to
-    a status that already exists in Jira.
+    `BACKLOG.md`, a GitHub label, a label on a Beads status, or, for Jira,
+    the steps a Jira admin follows to create the same status there (Lamproom
+    matches Jira statuses 1:1 by name and flags the ones still missing).
   - **Choosing a flow:** a story's flow must end in a `task_list`, so picking
     `software-delivery` for Story warns that stories would build code
     directly.
   - **The Story type** shows #218 at the split step's approve gate. The
     proposed tasks link three issues that already exist instead of
-    duplicating them, and mark which tasks have to wait for others. *Approve*
-    creates the two new tasks and moves the story to `in tasks`.
-  Keys: `1`/`2`/`3` switch types, `n` adds a status, `f` toggles free moves,
+    duplicating them, and mark which tasks have to wait for others. A
+    checkbox turns on the story's acceptance review. *Approve* creates the
+    two new tasks and the story branch, and moves the story to `in tasks`.
+    When the last task is done, the story runs `story-land`: the acceptance
+    review if ticked, then a land gate for the story branch.
+  Keys: `1` to `4` switch types, `n` adds a status, `f` toggles free moves,
   `Esc` closes.
 
 ## Conventions
