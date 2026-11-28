@@ -307,9 +307,9 @@ export function ProjectPage() {
         {p && (
           <>
             <Remove p={p} live={live} />
-            <ImportMarkdown projectId={p.id} />
-            <ImportFromJira projectId={p.id} />
-            <ImportFromGithub projectId={p.id} defaultOwnerRepo={githubDefaultFromSource(p)} />
+            <ImportMarkdown projectId={p.id} pinned={p.taskProvider ?? null} />
+            <ImportFromJira projectId={p.id} pinned={p.taskProvider ?? null} />
+            <ImportFromGithub projectId={p.id} pinned={p.taskProvider ?? null} defaultOwnerRepo={githubDefaultFromSource(p)} />
             <Button size="sm" asChild>
               <Link href={newRunHref(p)}>
                 <Play aria-hidden /> New run

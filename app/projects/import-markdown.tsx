@@ -22,7 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { startMarkdownImport } from './api.ts';
 import { ImportToast } from './import-jira.tsx';
 
-export function ImportMarkdown({ projectId }: { projectId: string }) {
+export function ImportMarkdown({ projectId, pinned }: { projectId: string; pinned: string | null }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
@@ -37,11 +37,19 @@ export function ImportMarkdown({ projectId }: { projectId: string }) {
     },
   });
 
+  const blocked = pinned !== null && pinned !== 'markdown';
+  const triggerDisabled = blocked || importId !== undefined;
+  const triggerTitle = blocked
+    ? `This project uses ${pinned} — only one task provider per project. Delete the stored tasks to switch.`
+    : importId !== undefined
+      ? 'An import is already running for this project'
+      : undefined;
+
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button size="sm" variant="outline" disabled={importId !== undefined} title={importId !== undefined ? 'An import is already running for this project' : undefined}>
+          <Button size="sm" variant="outline" disabled={triggerDisabled} title={triggerTitle}>
             <FileText aria-hidden /> Import markdown
           </Button>
         </DialogTrigger>

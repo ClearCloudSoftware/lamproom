@@ -21,7 +21,7 @@ import { GithubTaskProvider } from '../../../../packages/adapters/src/index.ts';
 import { redactToken } from '../../../../packages/adapters/src/ticket/github/auth.ts';
 import { openDb } from '../../../../packages/cli/src/storage.ts';
 import { startIntake } from '../../../../packages/cli/src/intake.ts';
-import { readProjects } from '../../../../packages/cli/src/projects.ts';
+import { claimTaskProvider, readProjects } from '../../../../packages/cli/src/projects.ts';
 import { readGithubTasksCredential } from '../../../../packages/cli/src/github-tasks.ts';
 import { readGithubSettings, staticResolver, tokensOf } from '../../github-tasks/_lib.ts';
 import { runningImports, runningKey } from '../../jira/local.ts';
@@ -52,6 +52,9 @@ export async function POST(request: Request) {
   if (projects.find((p) => p.id === projectId) === undefined) {
     return Response.json({ error: `project not found: ${projectId}` }, { status: 404 });
   }
+
+  const claim = claimTaskProvider(dataDir(), projectId, 'github');
+  if (!claim.ok) return Response.json({ error: claim.error }, { status: claim.status });
 
   const settings = readGithubSettings();
   const explicit = parsed.data.owner !== undefined && parsed.data.repo !== undefined

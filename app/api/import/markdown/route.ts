@@ -7,7 +7,7 @@
 import { join } from 'node:path';
 import { z } from 'zod';
 import { startBacklogImport } from '../../../../packages/cli/src/backlog-import.ts';
-import { readProjects } from '../../../../packages/cli/src/projects.ts';
+import { claimTaskProvider, readProjects } from '../../../../packages/cli/src/projects.ts';
 import { openDb } from '../../../../packages/cli/src/storage.ts';
 import { body, dataDir, refused, runsDir } from '../../flows/local.ts';
 
@@ -19,6 +19,8 @@ export async function POST(request: Request) {
   const projectId = new URL(request.url).searchParams.get('project');
   const project = projectId ? readProjects(dataDir()).find((p) => p.id === projectId) : undefined;
   if (!project) return Response.json({ error: `project not found: ${projectId ?? '(none)'}` }, { status: 404 });
+  const claim = claimTaskProvider(dataDir(), project.id, 'markdown');
+  if (!claim.ok) return Response.json({ error: claim.error }, { status: claim.status });
   const input = Input.safeParse(await body(request));
   if (!input.success) return Response.json({ error: 'send { content } or { path }' }, { status: 400 });
 

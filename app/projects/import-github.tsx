@@ -31,9 +31,11 @@ import { ImportToast } from './import-jira.tsx';
 
 export function ImportFromGithub({
   projectId,
+  pinned,
   defaultOwnerRepo,
 }: {
   projectId: string;
+  pinned: string | null;
   /** Pre-fill when the project itself lives on GitHub; falls back to the saved default. */
   defaultOwnerRepo?: { owner: string; repo: string };
 }) {
@@ -64,14 +66,17 @@ export function ImportFromGithub({
   };
   const ready = effective.owner !== '' && effective.repo !== '';
 
-  const triggerDisabled = !loaded || !connected || importId !== undefined;
-  const triggerTitle = !loaded
-    ? 'Checking GitHub connection…'
-    : !connected
-      ? 'No PAT saved — add one in Settings → Connections → GitHub Issues'
-      : importId !== undefined
-        ? 'An import is already running for this project'
-        : undefined;
+  const blocked = pinned !== null && pinned !== 'github';
+  const triggerDisabled = blocked || !loaded || !connected || importId !== undefined;
+  const triggerTitle = blocked
+    ? `This project uses ${pinned} — only one task provider per project. Delete the stored tasks to switch.`
+    : !loaded
+      ? 'Checking GitHub connection…'
+      : !connected
+        ? 'No PAT saved — add one in Settings → Connections → GitHub Issues'
+        : importId !== undefined
+          ? 'An import is already running for this project'
+          : undefined;
 
   return (
     <>

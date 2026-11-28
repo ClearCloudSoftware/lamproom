@@ -13,7 +13,7 @@
 
 import { join } from 'node:path';
 import { deleteTasks, listTasks, openDb } from '../../../../../packages/cli/src/storage.ts';
-import { readProjects } from '../../../../../packages/cli/src/projects.ts';
+import { readProjects, releaseTaskProvider } from '../../../../../packages/cli/src/projects.ts';
 import { dataDir, refused } from '../../../flows/local.ts';
 
 type Params = { params: Promise<{ id: string }> };
@@ -59,6 +59,9 @@ export async function DELETE(request: Request, { params }: Params) {
 
   const db = openDb(join(dataDir(), 'lamproom.db'));
   const deleted = deleteTasks(db, id, sourceId);
+  // Wiping the stored tasks is the operator's "let me switch providers" signal.
+  // Release the pin so the next import can claim a different provider.
+  releaseTaskProvider(dataDir(), id);
   return Response.json({ deleted });
 }
 

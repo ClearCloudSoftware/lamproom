@@ -43,7 +43,7 @@ import { importQuery, jiraStatusQuery, startJiraImport } from './api.ts';
 
 const JQL_PLACEHOLDER = 'project = KAN AND statusCategory != Done ORDER BY updated DESC';
 
-export function ImportFromJira({ projectId }: { projectId: string }) {
+export function ImportFromJira({ projectId, pinned }: { projectId: string; pinned: string | null }) {
   const queryClient = useQueryClient();
   const jira = useQuery(jiraStatusQuery);
   const [open, setOpen] = useState(false);
@@ -63,14 +63,17 @@ export function ImportFromJira({ projectId }: { projectId: string }) {
   const savedDefault = jira.data?.defaultJql ?? '';
   const effective = jql.trim() !== '' ? jql.trim() : savedDefault;
 
-  const triggerDisabled = !loaded || !connected || importId !== undefined;
-  const triggerTitle = !loaded
-    ? 'Checking Jira connection…'
-    : !connected
-      ? 'No Jira credentials — connect in Settings → Connections → Jira'
-      : importId !== undefined
-        ? 'An import is already running for this project'
-        : undefined;
+  const blocked = pinned !== null && pinned !== 'jira';
+  const triggerDisabled = blocked || !loaded || !connected || importId !== undefined;
+  const triggerTitle = blocked
+    ? `This project uses ${pinned} — only one task provider per project. Delete the stored tasks to switch.`
+    : !loaded
+      ? 'Checking Jira connection…'
+      : !connected
+        ? 'No Jira credentials — connect in Settings → Connections → Jira'
+        : importId !== undefined
+          ? 'An import is already running for this project'
+          : undefined;
 
   return (
     <>

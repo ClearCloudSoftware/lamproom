@@ -20,7 +20,7 @@ import {
 } from '../../../../packages/adapters/src/index.ts';
 import { openDb } from '../../../../packages/cli/src/storage.ts';
 import { startIntake } from '../../../../packages/cli/src/intake.ts';
-import { readProjects } from '../../../../packages/cli/src/projects.ts';
+import { claimTaskProvider, readProjects } from '../../../../packages/cli/src/projects.ts';
 import {
   buildJiraTransport,
   collectJiraTokens,
@@ -52,6 +52,9 @@ export async function POST(request: Request) {
   if (projects.find((p) => p.id === projectId) === undefined) {
     return Response.json({ error: `project not found: ${projectId}` }, { status: 404 });
   }
+
+  const claim = claimTaskProvider(dataDir(), projectId, 'jira');
+  if (!claim.ok) return Response.json({ error: claim.error }, { status: claim.status });
 
   const settings = readJiraSettings();
   if (settings.credential === undefined) {

@@ -8,7 +8,7 @@ import type { RunSummary } from '../src/flow-logs.ts';
 import { projectLimits, projectSettings, setCheckCommand, setLimits } from '../src/project.ts';
 import { APP_DEFAULTS } from '../src/settings.ts';
 import { addMemories, memoryFile } from '../src/memory.ts';
-import { addApproval, createProject, ownerOf, type Project, projectSlug, projectSpendUsd, readProjects, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
+import { addApproval, claimTaskProvider, createProject, ownerOf, type Project, projectSlug, projectSpendUsd, readProjects, releaseTaskProvider, removeProject, repoProblems, repoRoot, seedOnce, slugify, updateProject, viewProjects } from '../src/projects.ts';
 
 const temp = () => realpathSync(mkdtempSync(join(tmpdir(), 'lr-projects-'))); // macOS's temp folder is a link
 const git = (cwd: string, ...args: string[]) => spawnSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd, encoding: 'utf8' });
@@ -379,6 +379,38 @@ test("a project's analysis is on its view, read by the reader it is given; none 
   assert.equal(viewProjects([proj], [], lib, APP_DEFAULTS, Date.now(), read)[0].analysed, null);
   const analysed = { ...proj, analysis: { run: '2026-11-13T10-00-00-repo-analyst' } };
   assert.deepEqual(viewProjects([analysed], [], lib, APP_DEFAULTS, Date.now(), read)[0].analysed, { run: '2026-11-13T10-00-00-repo-analyst', status: 'running', spentUsd: 0 });
+});
+
+test('claimTaskProvider: first claim pins, same provider re-claims, a different one is a 409 until released', () => {
+  const data = temp();
+  const lib = flows();
+  const proj = value(createProject(data, lib, { name: 'p', repoPath: repo(), type: 'software' }));
+  assert.equal(readProjects(data)[0]!.taskProvider, undefined);
+
+  // First claim pins the project.
+  const first = claimTaskProvider(data, proj.id, 'jira');
+  assert.ok(first.ok);
+  assert.equal(readProjects(data)[0]!.taskProvider, 'jira');
+
+  // Same provider: idempotent.
+  assert.ok(claimTaskProvider(data, proj.id, 'jira').ok);
+
+  // Different provider: refused.
+  const clash = claimTaskProvider(data, proj.id, 'github');
+  assert.equal(clash.ok, false);
+  assert.equal((clash as { status: number }).status, 409);
+  assert.match((clash as { error: string }).error, /pinned to the 'jira' task provider/);
+
+  // Release lets a new provider claim.
+  releaseTaskProvider(data, proj.id);
+  assert.equal(readProjects(data)[0]!.taskProvider, undefined);
+  assert.ok(claimTaskProvider(data, proj.id, 'github').ok);
+  assert.equal(readProjects(data)[0]!.taskProvider, 'github');
+
+  // A missing project is a 404.
+  const gone = claimTaskProvider(data, 'nope', 'jira');
+  assert.equal(gone.ok, false);
+  assert.equal((gone as { status: number }).status, 404);
 });
 
 test("network hosts: saved sorted and once each on the record; anything but a host name is refused; an invalid .lamproom.yaml refuses a check command", () => {

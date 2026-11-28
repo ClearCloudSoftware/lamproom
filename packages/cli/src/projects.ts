@@ -28,6 +28,14 @@ import { type AppSettings, type Knowledge, type Overrides, OverridesSchema, PROJ
 export type Source = { kind: 'github'; repo: string } | { kind: 'local' };
 
 /**
+ * Well-known TaskProvider ids a project may pin itself to. One provider per
+ * project — the choice sticks on first successful import, and later imports
+ * for the project must use the same provider. Extend the union when a new
+ * adapter ships; `null` means "unpinned, any provider may claim it".
+ */
+export type TaskProviderId = 'jira' | 'github' | 'markdown';
+
+/**
  * `repoPath`: the repo's top folder, real path; `defaultFlow`: the flow new runs start on, the type's first in the
  * library at registration, or null to pick one each run; `baseBranch`: the branch work starts from and lands on, the
  * one checked out at registration (null: HEAD was detached); `type`: decides its flows and the defaults its settings
@@ -52,6 +60,12 @@ export interface Project {
   analysis?: { run: string };
   networkHosts?: string[];
   knowledgeBuild?: { run: string; commit: string | null };
+  /**
+   * Pinned on the project's first successful import. Later imports for the
+   * same project must use the same provider — see `claimTaskProvider`.
+   * Null when no import has ever succeeded for this project.
+   */
+  taskProvider?: TaskProviderId | null;
 }
 export type Result<T> = { ok: true; value: T } | { ok: false; status: 400 | 404 | 409; error: string };
 
@@ -77,6 +91,47 @@ export function setAnalysisRun(dataDir: string, id: string, run: string): void {
   const p = all.find((x) => x.id === id);
   if (!p) return;
   p.analysis = { run };
+  writeProjects(dataDir, all);
+}
+
+/**
+ * Claim a TaskProvider for a project.
+ *
+ * - First call for a project: pins `taskProvider = requested` and returns ok.
+ * - Later calls with the same provider: no-op, returns ok.
+ * - Later calls with a different provider: returns `{ ok: false, status: 409 }`
+ *   — one project, one provider.
+ *
+ * Nothing when the project is gone (returns 404). Idempotent; safe to call
+ * from every import route start.
+ */
+export function claimTaskProvider(dataDir: string, id: string, requested: TaskProviderId): Result<Project> {
+  const all = readProjects(dataDir);
+  const p = all.find((x) => x.id === id);
+  if (p === undefined) return fail(404, `project not found: ${id}`);
+  const current = p.taskProvider ?? null;
+  if (current === null) {
+    p.taskProvider = requested;
+    writeProjects(dataDir, all);
+    return { ok: true, value: p };
+  }
+  if (current === requested) return { ok: true, value: p };
+  return fail(
+    409,
+    `this project is pinned to the '${current}' task provider; a project may use only one. Delete the stored tasks from the board to switch.`,
+  );
+}
+
+/**
+ * Release a project's pinned TaskProvider. Called by the DELETE
+ * /api/projects/<id>/tasks route when it wipes a (project, source) pair,
+ * so the operator can re-pick a provider from scratch.
+ */
+export function releaseTaskProvider(dataDir: string, id: string): void {
+  const all = readProjects(dataDir);
+  const p = all.find((x) => x.id === id);
+  if (!p || p.taskProvider === undefined) return;
+  delete p.taskProvider;
   writeProjects(dataDir, all);
 }
 
