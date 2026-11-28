@@ -1,11 +1,14 @@
 /**
- * TaskSource — the port that makes ticket systems interchangeable.
+ * TaskProvider — the port that makes ticket systems interchangeable.
  *
  * Mirrors AgentProvider: one port in core, three-file adapters in
  * `adapters/src/ticket/<markdown|github|...>/`. The runner, the import route
  * and the UI program against this interface; adapters hold the per-source
  * SDK code. No file under `core/` or the runner may import an adapter —
  * only this port. The dependency rule is enforced the same way.
+ *
+ * (Historically called `TaskSource`; renamed to `TaskProvider` when write-back
+ * methods landed, so the name describes both the read and the write role.)
  *
  * An adapter's job is exactly two mappings:
  *   1. SourceInput  ->  the source's native request (REST params, GraphQL
@@ -185,7 +188,7 @@ export interface SourceResult {
 // ---------------------------------------------------------------------------
 
 /**
- * A task source. Adapters live under `adapters/src/ticket/<id>/provider.ts`
+ * A task provider. Adapters live under `adapters/src/ticket/<id>/provider.ts`
  * and expose a class that implements this interface plus a constructor that
  * takes the source-specific dependencies (target repo, credential resolver,
  * retry policy, injectable transport for tests).
@@ -194,7 +197,7 @@ export interface SourceResult {
  * by the capability set. Calling a method that the capabilities say is not
  * supported is a programming error (throw TypeError or similar).
  */
-export interface TaskSource {
+export interface TaskProvider {
   readonly id: SourceId;
   readonly capabilities: ReadonlySet<SourceCapability>;
 

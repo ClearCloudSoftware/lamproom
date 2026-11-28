@@ -1,5 +1,5 @@
 /**
- * JiraTaskSource — pulls Jira issues via the Atlassian Rovo MCP server.
+ * JiraTaskProvider — pulls Jira issues via the Atlassian Rovo MCP server.
  *
  * Flow of one fetch():
  *   1. Resolve credential. 'none' → CredentialMissingError, thrown BEFORE the
@@ -42,7 +42,7 @@ import {
   type SourceId,
   type SourceInput,
   type SourceResult,
-  type TaskSource,
+  type TaskProvider,
 } from '@lamproom/core';
 import type { McpClient } from '../../mcp/client.ts';
 import { buildIssuesCall } from './options.ts';
@@ -71,7 +71,7 @@ const CAPABILITIES: ReadonlySet<SourceCapability> = new Set<SourceCapability>([
   'stable_upstream_key',
 ]);
 
-export interface JiraTaskSourceOptions {
+export interface JiraTaskProviderOptions {
   resolver: SourceCredentialResolver;
   defaultJql: string;
   /** Scoping key for resolver lookups. Defaults to 'default'. */
@@ -88,7 +88,7 @@ export interface JiraTaskSourceOptions {
   callTimeoutMs?: number;
 }
 
-export class JiraTaskSource implements TaskSource {
+export class JiraTaskProvider implements TaskProvider {
   readonly id: SourceId = 'jira';
   readonly capabilities = CAPABILITIES;
 
@@ -101,7 +101,7 @@ export class JiraTaskSource implements TaskSource {
   private readonly retryPolicy: RetryPolicy;
   private readonly callTimeoutMs: number;
 
-  constructor(opts: JiraTaskSourceOptions) {
+  constructor(opts: JiraTaskProviderOptions) {
     this.resolver = opts.resolver;
     this.defaultJql = opts.defaultJql;
     this.projectId = opts.projectId ?? 'default';
@@ -109,7 +109,7 @@ export class JiraTaskSource implements TaskSource {
     this.refreshOAuthFn =
       opts.refreshOAuthFn ??
       (async () => {
-        throw new Error('JiraTaskSource: refreshOAuthFn not configured — provide one when the resolver may return atlassian_oauth');
+        throw new Error('JiraTaskProvider: refreshOAuthFn not configured — provide one when the resolver may return atlassian_oauth');
       });
     this.nowFn = opts.nowFn ?? (() => new Date());
     this.retryPolicy = opts.retryPolicy ?? DEFAULT_RETRY;

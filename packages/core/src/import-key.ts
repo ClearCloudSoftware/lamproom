@@ -1,5 +1,5 @@
 /**
- * Server-derived import keys for TaskSource adapters.
+ * Server-derived import keys for TaskProvider adapters.
  *
  * The rule the v1 duplicate-import bug exists for: adapters NEVER set
  * `importKey` directly. They hand up an `ImportKeyHint` (optional upstream id
@@ -12,8 +12,8 @@
  * policy" section of docs/superpowers/specs/2026-11-14-task-source-port-design.md.
  */
 
-import type { ImportKeyHint } from './ports/task-source.ts';
-import type { SourceId } from './ports/task-source.ts';
+import type { ImportKeyHint } from './ports/task-provider.ts';
+import type { SourceId } from './ports/task-provider.ts';
 
 /**
  * How much to trust the source's own id.

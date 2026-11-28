@@ -1,5 +1,5 @@
 /**
- * GithubTaskSource — pulls GitHub issues as ParsedTask[] via GraphQL.
+ * GithubTaskProvider — pulls GitHub issues as ParsedTask[] via GraphQL.
  *
  * The flow for one fetch():
  *
@@ -36,7 +36,7 @@ import {
   type SourceId,
   type SourceInput,
   type SourceResult,
-  type TaskSource,
+  type TaskProvider,
   type RetryPolicy,
 } from '@lamproom/core';
 import { buildIssuesQuery, type GithubTarget } from './options.ts';
@@ -45,7 +45,7 @@ import { CredentialMissingError, redactToken } from './auth.ts';
 
 export type GraphqlFn = (query: string, variables: Record<string, unknown>) => Promise<GithubIssuesPayload>;
 
-export interface GithubTaskSourceOptions {
+export interface GithubTaskProviderOptions {
   target: GithubTarget;
   resolver: SourceCredentialResolver;
   /** Scoping key for resolver lookups. Defaults to 'default'. */
@@ -58,7 +58,7 @@ export interface GithubTaskSourceOptions {
 
 export { CredentialMissingError };
 
-export class GithubTaskSource implements TaskSource {
+export class GithubTaskProvider implements TaskProvider {
   readonly id: SourceId = 'github';
   readonly capabilities: ReadonlySet<SourceCapability> = new Set<SourceCapability>([
     'pull',
@@ -75,7 +75,7 @@ export class GithubTaskSource implements TaskSource {
   private readonly injectedGraphqlFn?: GraphqlFn;
   private readonly retryPolicy: RetryPolicy;
 
-  constructor(opts: GithubTaskSourceOptions) {
+  constructor(opts: GithubTaskProviderOptions) {
     this.target = opts.target;
     this.resolver = opts.resolver;
     this.projectId = opts.projectId ?? 'default';

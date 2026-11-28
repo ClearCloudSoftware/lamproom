@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { ParsedTask, SourceInput, SourceResult, TaskSource } from '@lamproom/core';
+import type { ParsedTask, SourceInput, SourceResult, TaskProvider } from '@lamproom/core';
 import { runIntake } from '../src/intake.ts';
 import { getImport, listTasks, openDb } from '../src/storage.ts';
 
@@ -19,7 +19,7 @@ function makePage(keys: string[], next?: string): SourceResult {
   };
 }
 
-function fakeSource(pages: SourceResult[]): TaskSource {
+function fakeSource(pages: SourceResult[]): TaskProvider {
   let i = 0;
   return {
     id: 'jira',
@@ -67,7 +67,7 @@ test('re-running is idempotent: updates existing (Review Focus #1 extended)', as
 test('failure persists state=failed and keeps upserts up to that point', async () => {
   const db = await freshDb();
   let call = 0;
-  const source: TaskSource = {
+  const source: TaskProvider = {
     id: 'jira',
     capabilities: new Set(['pull', 'pagination']),
     async fetch(): Promise<SourceResult> {
@@ -117,7 +117,7 @@ test('maxMs budget stops the loop even when nextCursor remains', async () => {
   const db = await freshDb();
   let call = 0;
   let now = 1_000_000;
-  const source: TaskSource = {
+  const source: TaskProvider = {
     id: 'jira',
     capabilities: new Set(['pull', 'pagination']),
     async fetch(): Promise<SourceResult> {
@@ -146,7 +146,7 @@ test('maxMs budget stops the loop even when nextCursor remains', async () => {
 test('passes input.query through to the source', async () => {
   const db = await freshDb();
   let seenQuery: string | undefined;
-  const source: TaskSource = {
+  const source: TaskProvider = {
     id: 'jira',
     capabilities: new Set(['pull']),
     async fetch(input) {

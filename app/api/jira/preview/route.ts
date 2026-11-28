@@ -1,7 +1,7 @@
 /**
  * GET /api/jira/preview?jql=...&limit=10
  *
- * Constructs a JiraTaskSource, calls fetch() for one page, returns the
+ * Constructs a JiraTaskProvider, calls fetch() for one page, returns the
  * normalized tasks for the UI preview table. Nothing writes to disk except
  * a refreshed OAuth token (when refresh fires).
  *
@@ -11,7 +11,7 @@
 
 import {
   JiraCredentialMissingError,
-  JiraTaskSource,
+  JiraTaskProvider,
   McpClient,
   redactJiraTokens,
 } from '../../../../packages/adapters/src/index.ts';
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
   const mcpClient = new McpClient(buildJiraTransport(cred));
 
   try {
-    const src = new JiraTaskSource({
+    const src = new JiraTaskProvider({
       resolver: staticResolver(cred),
       defaultJql,
       mcpClient,

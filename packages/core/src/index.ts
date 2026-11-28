@@ -2,7 +2,7 @@ export * from './ports/agent-provider.ts';
 export * from './ports/events.ts';
 export * from './ports/exec-host.ts';
 export * from './ports/workspace.ts';
-export * from './ports/task-source.ts';
+export * from './ports/task-provider.ts';
 export * from './ports/ticket.ts';
 export * from './ports/credentials.ts';
 export * from './import-key.ts';

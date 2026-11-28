@@ -175,7 +175,7 @@ export function RepositoriesPage() {
   );
 }
 
-// Intake And Import's TaskSource adapters that don't ship a settings page yet.
+// Intake And Import's TaskProvider adapters that don't ship a settings page yet.
 // Jira, Markdown and GitHub have shipping UIs — the rest follow in later plans.
 const TASK_PROVIDERS_SOON = [
   { id: 'linear', name: 'Linear', text: "A team's issues as tasks.", icon: ListTodo },

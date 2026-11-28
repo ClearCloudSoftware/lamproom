@@ -11,7 +11,7 @@
  * Kept separate from `.lamproom/credentials.json` (the EnvFileCredentialResolver's
  * file) and from `jira.json` for the same reason jira.json is separate: the UI
  * manages this file at runtime, no editor and no file-mode dance for the
- * operator. The GithubTaskSource adapter still works with any
+ * operator. The GithubTaskProvider adapter still works with any
  * SourceCredentialResolver; the API route uses a staticResolver that reads
  * from this file.
  *

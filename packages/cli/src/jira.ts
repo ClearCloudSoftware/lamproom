@@ -19,7 +19,7 @@
  * no dev-server restart, and Electron builds don't need a bundled env file.
  *
  * This module is the ONLY place the file is read or written. API routes under
- * app/api/jira/ call these helpers; the JiraTaskSource adapter never reads
+ * app/api/jira/ call these helpers; the JiraTaskProvider adapter never reads
  * the file directly.
  */
 

@@ -4,18 +4,18 @@
  * Sits next to task-source.ts the same way events.ts sits next to
  * agent-provider.ts. The envelope is shared by the runner, the cost ledger,
  * and the import route — anything that needs to attribute API quota consumed
- * by a TaskSource.
+ * by a TaskProvider.
  *
  * Unlike AgentProvider's `Usage`, which counts tokens and dollars, this counts
  * requests and rate-limit headroom. A source that bills per call (rare) reports
  * `costUsd`; most set it to zero (undefined) and the ledger counts nothing.
  *
- * See docs/Lamproom/Intake And Import/TaskSource Port.md and
+ * See docs/Lamproom/Intake And Import/TaskProvider Port.md and
  * docs/superpowers/specs/2026-11-14-task-source-port-design.md.
  */
 
 /**
- * Quota consumed by one or more TaskSource calls.
+ * Quota consumed by one or more TaskProvider calls.
  *
  * `requests` counts network-successful calls only. A call that failed with a
  * RetryableError and succeeded on the next attempt counts as one. This is a

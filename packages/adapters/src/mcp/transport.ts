@@ -3,7 +3,7 @@
  *
  * Two transports supported today:
  *   - httpTransport: wraps the SDK's StreamableHTTPClientTransport. Used by
- *     the JiraTaskSource and any future adapter that talks to a hosted MCP
+ *     the JiraTaskProvider and any future adapter that talks to a hosted MCP
  *     server (Rovo, Linear hosted, Confluence hosted).
  *   - stdioTransport: a stub that throws. Lands when the first Docker-backed
  *     adapter needs it (`sooperset/mcp-atlassian`-style).

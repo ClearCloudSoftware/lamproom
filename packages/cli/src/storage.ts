@@ -5,7 +5,7 @@
  * against the tasks and imports tables. API routes and the intake service
  * call these functions; no SQL leaks past this seam.
  *
- * Every mutation respects the trust-boundary rule from the TaskSource spec:
+ * Every mutation respects the trust-boundary rule from the TaskProvider spec:
  * ParsedTask content is data, never instructions. Errors passed to
  * `finishImport({ error })` are expected to be already redacted — callers
  * run tokens through `redactJiraTokens` before passing the message in.

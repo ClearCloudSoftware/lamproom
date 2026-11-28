@@ -1,5 +1,5 @@
 /**
- * MarkdownTaskSource input resolution — pure.
+ * MarkdownTaskProvider input resolution — pure.
  *
  * Decides where the markdown content comes from. The provider does the I/O
  * (reads the file when `path` is set); this module just validates the shape.

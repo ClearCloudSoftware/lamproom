@@ -2,7 +2,7 @@
  * POST /api/import/github?project=<id>&owner=<o>&repo=<r>
  *
  * Kicks off a GitHub Issues import for the named project. Resolves the
- * stored PAT from `github-tasks.json`, builds a GithubTaskSource bound to
+ * stored PAT from `github-tasks.json`, builds a GithubTaskProvider bound to
  * (owner, repo), calls startIntake() and returns `{ importId }` immediately.
  * The UI then polls GET /api/imports/<id> until `state !== 'running'`.
  *
@@ -17,7 +17,7 @@
 
 import { join } from 'node:path';
 import { z } from 'zod';
-import { GithubTaskSource } from '../../../../packages/adapters/src/index.ts';
+import { GithubTaskProvider } from '../../../../packages/adapters/src/index.ts';
 import { redactToken } from '../../../../packages/adapters/src/ticket/github/auth.ts';
 import { openDb } from '../../../../packages/cli/src/storage.ts';
 import { startIntake } from '../../../../packages/cli/src/intake.ts';
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
   }
 
   const db = openDb(join(dataDir(), 'lamproom.db'));
-  const source = new GithubTaskSource({
+  const source = new GithubTaskProvider({
     target,
     resolver: staticResolver(cred),
     projectId,

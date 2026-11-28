@@ -10,7 +10,7 @@
  *
  * The shape this transport serves is the SAME envelope Rovo would return:
  *   { content: [{ type: 'text', text: '<JSON string of search result>' }] }
- * so `JiraTaskSource` + `normalize.ts` see no difference. When Rovo opens up
+ * so `JiraTaskProvider` + `normalize.ts` see no difference. When Rovo opens up
  * to third parties, swap `restTransport` for `httpTransport` and nothing
  * else needs to change.
  *

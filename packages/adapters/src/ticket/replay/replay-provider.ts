@@ -1,5 +1,5 @@
 /**
- * ReplayTaskSource — the test double for TaskSource.
+ * ReplayTaskProvider — the test double for TaskProvider.
  *
  * Mirrors ReplayProvider for AgentProvider: constructor takes a script, each
  * call pops the next entry and returns it. No network, no filesystem, no
@@ -21,15 +21,15 @@ import type {
   SourceId,
   SourceInput,
   SourceResult,
-  TaskSource,
+  TaskProvider,
 } from '@lamproom/core';
 
-export interface ReplayTaskSourceOptions {
+export interface ReplayTaskProviderOptions {
   script: SourceResult[];
   capabilities?: Set<SourceCapability>;
 }
 
-export class ReplayTaskSource implements TaskSource {
+export class ReplayTaskProvider implements TaskProvider {
   readonly id: SourceId = 'replay';
   readonly capabilities: ReadonlySet<SourceCapability>;
   private readonly script: SourceResult[];
@@ -38,7 +38,7 @@ export class ReplayTaskSource implements TaskSource {
   readonly fetch?: (input: SourceInput) => Promise<SourceResult>;
   readonly ingest?: (event: Buffer, headers: Record<string, string>) => Promise<SourceResult>;
 
-  constructor(opts: ReplayTaskSourceOptions) {
+  constructor(opts: ReplayTaskProviderOptions) {
     this.script = [...opts.script];
     this.capabilities = opts.capabilities ?? new Set<SourceCapability>(['pull']);
 
@@ -52,7 +52,7 @@ export class ReplayTaskSource implements TaskSource {
 
   private nextResult(): SourceResult {
     if (this.index >= this.script.length) {
-      throw new Error(`ReplayTaskSource: script exhausted after ${this.index} calls`);
+      throw new Error(`ReplayTaskProvider: script exhausted after ${this.index} calls`);
     }
     return this.script[this.index++]!;
   }

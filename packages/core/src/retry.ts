@@ -1,5 +1,5 @@
 /**
- * retryWithBackoff + RetryableError — the retry helper every HTTP TaskSource
+ * retryWithBackoff + RetryableError — the retry helper every HTTP TaskProvider
  * adapter uses when the source returns a 429 or a 5xx that is actually a
  * transient server hiccup.
  *

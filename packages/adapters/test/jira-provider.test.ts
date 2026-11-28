@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { JiraTaskSource } from '../src/ticket/jira/provider.ts';
+import { JiraTaskProvider } from '../src/ticket/jira/provider.ts';
 import { CredentialMissingError } from '../src/ticket/jira/auth.ts';
 import { McpClient, type McpTransport } from '../src/mcp/client.ts';
 import { McpTransportError } from '../src/mcp/errors.ts';
@@ -62,7 +62,7 @@ const apiTokenCred: Extract<SourceCredentials, { kind: 'atlassian_api_token' }> 
 
 test('throws CredentialMissingError before opening MCP transport (Review Focus #5)', async () => {
   const ops: string[] = [];
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver({ kind: 'none' }),
     defaultJql: 'project = X',
     mcpClient: fakeClient([await fixturePayload()], ops),
@@ -77,7 +77,7 @@ test('refreshes OAuth credential before opening transport when expiring (Review 
   const expiring = oauthCred({ expiresAt: '2026-11-17T10:00:30Z' });
   let refreshCalls = 0;
   let calledWith: SourceCredentials | undefined;
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(expiring),
     defaultJql: 'project = X',
     mcpClient: fakeClient([await fixturePayload()]),
@@ -95,7 +95,7 @@ test('refreshes OAuth credential before opening transport when expiring (Review 
 
 test('does NOT refresh when expiresAt is far enough away', async () => {
   let refreshed = false;
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(oauthCred({ expiresAt: '2030-01-01T00:00:00Z' })),
     defaultJql: 'project = X',
     mcpClient: fakeClient([await fixturePayload()]),
@@ -108,7 +108,7 @@ test('does NOT refresh when expiresAt is far enough away', async () => {
 
 test('respects Retry-After from MCP transport over exponential (Review Focus #3)', async () => {
   const start = Date.now();
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(apiTokenCred),
     defaultJql: 'project = X',
     mcpClient: fakeClient([new McpTransportError('rate', 429, { 'retry-after': '1' }), await fixturePayload()]),
@@ -130,7 +130,7 @@ test('redacts access token and refresh token from compound error (Review Focus #
     async listTools() { return []; },
     async close() {},
   };
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(oauthCred({ accessToken: access, refreshToken: refresh })),
     defaultJql: 'project = X',
     mcpClient: new McpClient(transport),
@@ -148,7 +148,7 @@ test('redacts API token from error on the api_token path', async () => {
     async listTools() { return []; },
     async close() {},
   };
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(apiTokenCred),
     defaultJql: 'project = X',
     mcpClient: new McpClient(transport),
@@ -158,7 +158,7 @@ test('redacts API token from error on the api_token path', async () => {
 });
 
 test('returns nextCursor when the Rovo response has next_page_token', async () => {
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(apiTokenCred),
     defaultJql: 'project = X',
     mcpClient: fakeClient([await fixturePayload()]),
@@ -171,7 +171,7 @@ test('returns nextCursor when the Rovo response has next_page_token', async () =
 
 test('nextCursor is undefined when next_page_token is absent', async () => {
   const payload: RovoJiraSearchResult = { issues: (await fixturePayload()).issues.slice(0, 2) };
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(apiTokenCred),
     defaultJql: 'project = X',
     mcpClient: fakeClient([payload]),
@@ -191,7 +191,7 @@ test('4xx other than 429 propagates immediately (no retry)', async () => {
     async listTools() { return []; },
     async close() {},
   };
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(apiTokenCred),
     defaultJql: 'project = X',
     mcpClient: new McpClient(transport),
@@ -203,7 +203,7 @@ test('4xx other than 429 propagates immediately (no retry)', async () => {
 
 test('closes the MCP client in finally block on success', async () => {
   const ops: string[] = [];
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(apiTokenCred),
     defaultJql: 'project = X',
     mcpClient: fakeClient([await fixturePayload()], ops),
@@ -222,7 +222,7 @@ test('closes the MCP client in finally block on error', async () => {
     async listTools() { return []; },
     async close() { ops.push('close'); },
   };
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver(apiTokenCred),
     defaultJql: 'project = X',
     mcpClient: new McpClient(transport),
@@ -233,7 +233,7 @@ test('closes the MCP client in finally block on error', async () => {
 });
 
 test('capabilities set is exactly the seven declared', () => {
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver({ kind: 'none' }),
     defaultJql: 'project = X',
     mcpClient: fakeClient([]),
@@ -245,7 +245,7 @@ test('capabilities set is exactly the seven declared', () => {
 });
 
 test('id is "jira"', () => {
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver: resolver({ kind: 'none' }),
     defaultJql: 'project = X',
     mcpClient: fakeClient([]),

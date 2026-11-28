@@ -1,5 +1,5 @@
 /**
- * runIntake — drain a TaskSource into SQLite storage.
+ * runIntake — drain a TaskProvider into SQLite storage.
  *
  * Owns the pagination loop. One `imports` row per call: 'running' at start,
  * 'done' on normal completion, 'failed' with a redacted error on any thrown
@@ -8,7 +8,7 @@
  * Why it lives in @lamproom/cli (not in the API route): the loop is also
  * useful for a future `lr import` CLI subcommand, and the plumbing (storage,
  * timing, budget) has no HTTP in it. The route is a thin wrapper that reads
- * credentials, builds a TaskSource, kicks this off, returns the importId.
+ * credentials, builds a TaskProvider, kicks this off, returns the importId.
  *
  * The budget caps are soft lower bounds: the loop finishes the current page
  * before stopping, so `maxTasks` of 100 may land 110 if the last page has
@@ -18,7 +18,7 @@
  * See docs/superpowers/plans/2026-11-19-task-storage-and-intake.md Task 4.
  */
 
-import type { SourceInput, SourceResult, TaskSource } from '@lamproom/core';
+import type { SourceInput, SourceResult, TaskProvider } from '@lamproom/core';
 import type { LamproomDb } from './db.ts';
 import {
   finishImport,
@@ -37,7 +37,7 @@ export interface IntakeBudget {
 export interface RunIntakeOptions {
   projectId: string;
   sourceId: string;
-  source: TaskSource;
+  source: TaskProvider;
   input: SourceInput;
   budget?: IntakeBudget;
   /** Clock. Tests override to walk through a budget deterministically. */

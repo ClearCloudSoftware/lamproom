@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { JiraTaskSource } from '../src/ticket/jira/provider.ts';
+import { JiraTaskProvider } from '../src/ticket/jira/provider.ts';
 import { ATLASSIAN_CLIENT_ID, refreshIfNeeded } from '../src/ticket/jira/oauth.ts';
 import { httpTransport } from '../src/mcp/transport.ts';
 import { McpClient } from '../src/mcp/client.ts';
@@ -18,7 +18,7 @@ test('live Jira fetch returns real issues (OAuth or API-token)', { skip: !live }
   const transport = buildTransport(cred);
   const mcpClient = new McpClient(transport);
 
-  const src = new JiraTaskSource({
+  const src = new JiraTaskProvider({
     resolver,
     defaultJql: process.env.FLOWBOARD_LIVE_JIRA_JQL!,
     mcpClient,

@@ -1,9 +1,9 @@
 /**
- * MarkdownTaskSource — reads a markdown backlog file, returns ParsedTask[].
+ * MarkdownTaskProvider — reads a markdown backlog file, returns ParsedTask[].
  *
  * The reference adapter. No credentials, no network, no pagination. Mirrors
  * the three-file split: options.ts (input resolution, pure), normalize.ts
- * (the parser, pure), provider.ts (I/O + the TaskSource interface).
+ * (the parser, pure), provider.ts (I/O + the TaskProvider interface).
  *
  * See docs/Lamproom/Intake And Import/Markdown Task Source.md.
  */
@@ -14,13 +14,13 @@ import {
   type SourceId,
   type SourceInput,
   type SourceResult,
-  type TaskSource,
+  type TaskProvider,
   ZERO_SOURCE_USAGE,
 } from '@lamproom/core';
 import { parseMarkdown } from './normalize.ts';
 import { resolveInput } from './options.ts';
 
-export class MarkdownTaskSource implements TaskSource {
+export class MarkdownTaskProvider implements TaskProvider {
   readonly id: SourceId = 'markdown';
   readonly capabilities: ReadonlySet<SourceCapability> = new Set<SourceCapability>([
     'pull',

@@ -2,7 +2,7 @@
  * POST /api/import/jira?project=<id>
  *
  * Kicks off a Jira import for the named project. Resolves the stored Jira
- * credential, builds a JiraTaskSource, calls startIntake() (synchronous ID
+ * credential, builds a JiraTaskProvider, calls startIntake() (synchronous ID
  * allocation) and returns `{ importId }` immediately. The UI then polls
  * GET /api/imports/<id> until `state !== 'running'`.
  *
@@ -14,7 +14,7 @@
 import { join } from 'node:path';
 import { z } from 'zod';
 import {
-  JiraTaskSource,
+  JiraTaskProvider,
   McpClient,
   redactJiraTokens,
 } from '../../../../packages/adapters/src/index.ts';
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
   const db = openDb(join(dataDir(), 'lamproom.db'));
   const mcpClient = new McpClient(buildJiraTransport(cred));
 
-  const source = new JiraTaskSource({
+  const source = new JiraTaskProvider({
     resolver: staticResolver(cred),
     defaultJql,
     mcpClient,

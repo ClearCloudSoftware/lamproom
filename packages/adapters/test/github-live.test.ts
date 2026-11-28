@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GithubTaskSource } from '../src/ticket/github/provider.ts';
+import { GithubTaskProvider } from '../src/ticket/github/provider.ts';
 import { EnvFileCredentialResolver } from '../src/credentials/env-file-resolver.ts';
 
 const live = process.env.FLOWBOARD_LIVE === '1' && process.env.FLOWBOARD_LIVE_GITHUB_REPO !== undefined;
@@ -10,7 +10,7 @@ test('live GitHub fetch returns real issues', { skip: !live }, async () => {
   assert.ok(owner !== undefined && owner !== '', 'FLOWBOARD_LIVE_GITHUB_REPO must be "owner/repo"');
   assert.ok(repo !== undefined && repo !== '', 'FLOWBOARD_LIVE_GITHUB_REPO must be "owner/repo"');
 
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner, repo },
     resolver: new EnvFileCredentialResolver({ root: process.env.FLOWBOARD_LIVE_ROOT ?? process.cwd() }),
     projectId: 'live',
@@ -35,7 +35,7 @@ test('live GitHub fetch returns real issues', { skip: !live }, async () => {
 
 test('live GitHub paginates through a second page when hasNextPage is true', { skip: !live }, async () => {
   const [owner, repo] = (process.env.FLOWBOARD_LIVE_GITHUB_REPO ?? '').split('/');
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: owner!, repo: repo! },
     resolver: new EnvFileCredentialResolver({ root: process.env.FLOWBOARD_LIVE_ROOT ?? process.cwd() }),
     projectId: 'live',

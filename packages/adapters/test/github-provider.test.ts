@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { GithubTaskSource, CredentialMissingError } from '../src/ticket/github/provider.ts';
+import { GithubTaskProvider, CredentialMissingError } from '../src/ticket/github/provider.ts';
 import { RetryableError, type SourceCredentialResolver } from '@lamproom/core';
 import type { GithubIssuesPayload } from '../src/ticket/github/normalize.ts';
 
@@ -19,7 +19,7 @@ function resolverReturning(credential: Parameters<SourceCredentialResolver['reso
 
 test('throws CredentialMissingError before any network call when credentials are "none" (Review Focus #3)', async () => {
   let graphqlCalls = 0;
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'none' }) },
     graphqlFn: async () => {
@@ -34,7 +34,7 @@ test('throws CredentialMissingError before any network call when credentials are
 test('nextCursor is undefined when GraphQL page has hasNextPage false (Review Focus #4)', async () => {
   const payload = await loadPayload();
   payload.repository.issues.pageInfo.hasNextPage = false;
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'github_pat', token: 'ghp_xxx' }) },
     graphqlFn: async () => payload,
@@ -47,7 +47,7 @@ test('nextCursor is undefined when GraphQL page has hasNextPage false (Review Fo
 
 test('returns nextCursor when hasNextPage is true', async () => {
   const payload = await loadPayload();
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'github_pat', token: 'ghp_xxx' }) },
     graphqlFn: async () => payload,
@@ -59,7 +59,7 @@ test('returns nextCursor when hasNextPage is true', async () => {
 test('retries on RetryableError thrown directly and succeeds', async () => {
   const payload = await loadPayload();
   let n = 0;
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'github_pat', token: 'ghp_xxx' }) },
     graphqlFn: async () => {
@@ -76,7 +76,7 @@ test('retries on RetryableError thrown directly and succeeds', async () => {
 test('maps 429 to RetryableError with Retry-After seconds', async () => {
   const payload = await loadPayload();
   let n = 0;
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'github_pat', token: 'ghp_xxx' }) },
     graphqlFn: async () => {
@@ -99,7 +99,7 @@ test('maps 429 to RetryableError with Retry-After seconds', async () => {
 test('maps 403 with retry-after header to RetryableError (secondary rate limit)', async () => {
   const payload = await loadPayload();
   let n = 0;
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'github_pat', token: 'ghp_xxx' }) },
     graphqlFn: async () => {
@@ -122,7 +122,7 @@ test('maps 403 with retry-after header to RetryableError (secondary rate limit)'
 test('maps 500 to RetryableError', async () => {
   const payload = await loadPayload();
   let n = 0;
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'github_pat', token: 'ghp_xxx' }) },
     graphqlFn: async () => {
@@ -141,7 +141,7 @@ test('maps 500 to RetryableError', async () => {
 
 test('4xx other than 429 propagates immediately without retry', async () => {
   let calls = 0;
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'github_pat', token: 'ghp_xxx' }) },
     graphqlFn: async () => {
@@ -158,7 +158,7 @@ test('4xx other than 429 propagates immediately without retry', async () => {
 
 test('redacts the token from error messages', async () => {
   const token = 'ghp_SECRETSECRETSECRETSECRETSECRETSECR';
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'github_pat', token }) },
     graphqlFn: async () => {
@@ -172,7 +172,7 @@ test('redacts the token from error messages', async () => {
 });
 
 test('capabilities include pagination, incremental, labels, assignees, stable_upstream_key', () => {
-  const src = new GithubTaskSource({
+  const src = new GithubTaskProvider({
     target: { owner: 'o', repo: 'r' },
     resolver: { resolve: async () => ({ kind: 'none' }) },
     graphqlFn: async () => ({}) as GithubIssuesPayload,

@@ -14,7 +14,7 @@
  *      to swap the code + verifier for access/refresh tokens.
  *   5. listAccessibleResources() lists the Atlassian sites the token can
  *      reach; the caller picks a cloudId (first site wins for v1).
- *   6. refreshIfNeeded() is called by JiraTaskSource before every fetch;
+ *   6. refreshIfNeeded() is called by JiraTaskProvider before every fetch;
  *      it POSTs to the token endpoint when expiresAt is within 60s.
  *
  * startOAuthFlow() wires steps 1-4 into a single call that returns a

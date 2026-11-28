@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { MarkdownTaskSource } from '../src/ticket/markdown/provider.ts';
+import { MarkdownTaskProvider } from '../src/ticket/markdown/provider.ts';
 
 const live = process.env.FLOWBOARD_LIVE === '1';
 const here = import.meta.dirname;
@@ -10,7 +10,7 @@ const here = import.meta.dirname;
 test('live markdown round-trip against the backlog fixture', { skip: !live }, async () => {
   const path = join(here, 'fixtures/markdown/sample.md');
   const content = await readFile(path, 'utf8');
-  const src = new MarkdownTaskSource();
+  const src = new MarkdownTaskProvider();
 
   const r1 = await src.fetch({ path });
   const r2 = await src.fetch({ content });

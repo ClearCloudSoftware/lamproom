@@ -24,7 +24,7 @@ import type { SourceCredentials } from '@lamproom/core';
 import {
   ATLASSIAN_CLIENT_ID,
   EnvFileCredentialResolver,
-  JiraTaskSource,
+  JiraTaskProvider,
   McpClient,
   httpTransport,
   refreshIfNeeded,
@@ -76,9 +76,9 @@ test('live Jira → runIntake drains into SQLite and is idempotent on re-run', {
   assert.equal(second.updated, first.created, 'expected every row touched by the second run');
 });
 
-function buildSource(cred: SourceCredentials, defaultJql: string): JiraTaskSource {
+function buildSource(cred: SourceCredentials, defaultJql: string): JiraTaskProvider {
   const mcpClient = new McpClient(buildTransport(cred));
-  return new JiraTaskSource({
+  return new JiraTaskProvider({
     resolver: {
       // runIntake calls source.fetch which calls resolver.resolve again; return the same cred.
       resolve: async () => cred,

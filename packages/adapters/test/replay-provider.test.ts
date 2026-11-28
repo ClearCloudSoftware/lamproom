@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ReplayTaskSource } from '../src/ticket/replay/replay-source.ts';
+import { ReplayTaskProvider } from '../src/ticket/replay/replay-provider.ts';
 
 test('yields scripted pages in order and stops', async () => {
-  const src = new ReplayTaskSource({
+  const src = new ReplayTaskProvider({
     script: [
       {
         tasks: [{ importKey: 'a', title: 'A', _hint: { titleSlug: 'a' } }],
@@ -25,13 +25,13 @@ test('yields scripted pages in order and stops', async () => {
 });
 
 test('rejects fetch past the end of the script', async () => {
-  const src = new ReplayTaskSource({ script: [{ tasks: [], usage: { requests: 0 } }] });
+  const src = new ReplayTaskProvider({ script: [{ tasks: [], usage: { requests: 0 } }] });
   await src.fetch!({});
   await assert.rejects(src.fetch!({}), /script exhausted/);
 });
 
 test('defaults to { pull } capability', () => {
-  const src = new ReplayTaskSource({ script: [] });
+  const src = new ReplayTaskProvider({ script: [] });
   assert.ok(src.capabilities.has('pull'));
   assert.equal(src.capabilities.has('push'), false);
   assert.equal(src.fetch !== undefined, true);
@@ -39,7 +39,7 @@ test('defaults to { pull } capability', () => {
 });
 
 test('push capability wires ingest() and pops the same script', async () => {
-  const src = new ReplayTaskSource({
+  const src = new ReplayTaskProvider({
     script: [{ tasks: [{ importKey: 'x', title: 'X', _hint: { titleSlug: 'x' } }], usage: { requests: 0 } }],
     capabilities: new Set(['push']),
   });
@@ -50,6 +50,6 @@ test('push capability wires ingest() and pops the same script', async () => {
 });
 
 test('id is "replay"', () => {
-  const src = new ReplayTaskSource({ script: [] });
+  const src = new ReplayTaskProvider({ script: [] });
   assert.equal(src.id, 'replay');
 });

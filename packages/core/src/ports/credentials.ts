@@ -18,7 +18,7 @@
  * "Credentials".
  */
 
-import type { SourceId } from './task-source.ts';
+import type { SourceId } from './task-provider.ts';
 
 /**
  * A credential for one source. The adapter inspects `kind` to decide how to
