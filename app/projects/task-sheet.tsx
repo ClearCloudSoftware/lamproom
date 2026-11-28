@@ -192,6 +192,11 @@ function Placement({ projectId, row, ix }: { projectId: string; row: TaskRow; ix
           {move.error.message}
         </p>
       )}
+      {move.data?.writeBack && !move.data.writeBack.ok && (
+        <p role="status" className="m-0 border-l-2 border-wait bg-[var(--wait-soft)] px-3 py-2 text-xs text-wait whitespace-pre-wrap break-words">
+          Moved in Lamproom, but the source refused the write: {move.data.writeBack.reason}
+        </p>
+      )}
     </section>
   );
 }

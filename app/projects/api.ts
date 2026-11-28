@@ -70,11 +70,25 @@ export const projectTasksQuery = (projectId: string, sourceId?: string) =>
     refetchInterval: 10_000,
   });
 
-/** Moves a task to a board status; a 404 or 409 throws an ApiError whose message is the server's reason. Refreshes the project's tasks either way. */
+/**
+ * Moves a task to a board status. A 404 or 409 throws an ApiError whose
+ * message is the server's reason; refreshes the project's tasks either way.
+ *
+ * On a 200 the response may carry `writeBack`:
+ *   - undefined     — no write-back attempted (e.g. source isn't jira)
+ *   - { ok: true }  — the source accepted the write
+ *   - { ok: false, reason } — the Lamproom move stood, but the source
+ *     refused the push. Surface as a warning so the operator knows they
+ *     may need to re-sign-in or rename a Jira status.
+ */
+export interface MoveTaskResult {
+  task: TaskRow;
+  writeBack?: { ok: true } | { ok: false; reason: string };
+}
 export const moveTaskMutation = (projectId: string, client: Pick<QueryClient, 'invalidateQueries'>) =>
   mutationOptions({
     mutationFn: ({ sourceId, importKey, to }: { sourceId: string; importKey: string; to: StatusId }) =>
-      call<{ task: TaskRow }>(`/api/projects/${projectId}/tasks/${encodeURIComponent(sourceId)}/${encodeURIComponent(importKey)}`, {
+      call<MoveTaskResult>(`/api/projects/${projectId}/tasks/${encodeURIComponent(sourceId)}/${encodeURIComponent(importKey)}`, {
         method: 'PATCH',
         body: JSON.stringify({ status: to }),
       }),

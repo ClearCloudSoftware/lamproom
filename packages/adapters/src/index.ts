@@ -24,3 +24,4 @@ export {
 } from './ticket/jira/auth.ts';
 export * from './ticket/jira/oauth.ts';
 export * from './ticket/jira/rest-transport.ts';
+export * from './ticket/jira/transitions.ts';

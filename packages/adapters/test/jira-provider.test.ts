@@ -232,7 +232,7 @@ test('closes the MCP client in finally block on error', async () => {
   assert.equal(ops.filter((o) => o === 'close').length, 1);
 });
 
-test('capabilities set is exactly the seven declared', () => {
+test('capabilities set is exactly the eight declared', () => {
   const src = new JiraTaskProvider({
     resolver: resolver({ kind: 'none' }),
     defaultJql: 'project = X',
@@ -240,7 +240,7 @@ test('capabilities set is exactly the seven declared', () => {
   });
   assert.deepEqual(
     [...src.capabilities].sort(),
-    ['assignees', 'incremental', 'labels', 'pagination', 'pull', 'rich_body', 'stable_upstream_key'],
+    ['assignees', 'incremental', 'labels', 'pagination', 'pull', 'rich_body', 'stable_upstream_key', 'write_back_status'],
   );
 });
 

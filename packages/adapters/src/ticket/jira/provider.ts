@@ -42,7 +42,9 @@ import {
   type SourceId,
   type SourceInput,
   type SourceResult,
+  type StatusId,
   type TaskProvider,
+  type WriteBackResult,
 } from '@lamproom/core';
 import type { McpClient } from '../../mcp/client.ts';
 import { buildIssuesCall } from './options.ts';
@@ -52,6 +54,7 @@ import {
   type RovoJiraSearchResult,
 } from './normalize.ts';
 import { CredentialMissingError, redactTokens } from './auth.ts';
+import { noTransitionMessage, pickTransition, type JiraTransition } from './transitions.ts';
 
 type OAuthCred = Extract<SourceCredentials, { kind: 'atlassian_oauth' }>;
 
@@ -69,6 +72,7 @@ const CAPABILITIES: ReadonlySet<SourceCapability> = new Set<SourceCapability>([
   'labels',
   'assignees',
   'stable_upstream_key',
+  'write_back_status',
 ]);
 
 export interface JiraTaskProviderOptions {
@@ -172,6 +176,77 @@ export class JiraTaskProvider implements TaskProvider {
     const nowMs = this.nowFn().getTime();
     if (expiresAtMs - nowMs > REFRESH_WINDOW_MS) return cred;
     return await this.refreshOAuthFn(cred);
+  }
+
+  /**
+   * Transition a Jira issue to the Lamproom status.
+   *
+   * Two REST calls:
+   *   1. GET  /rest/api/3/issue/<key>/transitions — list available transitions
+   *      from the issue's current workflow state. Each has `id`, `name`, and
+   *      `to.name` (the status the transition lands on).
+   *   2. POST /rest/api/3/issue/<key>/transitions with `{ transition: { id } }`
+   *      for the first transition whose `to.name` matches the Lamproom status
+   *      (see transitions.ts for the mapping).
+   *
+   * Returns `{ ok: true }` on a successful 204, or `{ ok: false, reason }`
+   * for every expected failure: no mapping (the workflow has no matching
+   * transition), missing scope (403), issue gone (404), auth gone (401).
+   * Thrown errors pass through to the caller with tokens redacted.
+   */
+  async applyStatus(upstreamKey: string, status: StatusId): Promise<WriteBackResult> {
+    const rawCred = await this.resolver.resolve(this.id, this.projectId);
+    if (rawCred.kind === 'none') throw new CredentialMissingError(this.id, this.projectId);
+    if (rawCred.kind !== 'atlassian_oauth' && rawCred.kind !== 'atlassian_api_token') {
+      throw new Error(`jira applyStatus: unsupported credential kind '${rawCred.kind}'`);
+    }
+    const cred = await this.maybeRefresh(rawCred);
+    const baseUrl = cred.kind === 'atlassian_oauth'
+      ? `https://api.atlassian.com/ex/jira/${cred.cloudId}`
+      : cred.baseUrl.replace(/\/$/, '');
+    const authorization = cred.kind === 'atlassian_oauth'
+      ? `Bearer ${cred.accessToken}`
+      : `Basic ${Buffer.from(`${cred.email}:${cred.token}`).toString('base64')}`;
+
+    const accessToken = cred.kind === 'atlassian_oauth' ? cred.accessToken : undefined;
+    const refreshToken = cred.kind === 'atlassian_oauth' ? cred.refreshToken : undefined;
+    const apiToken = cred.kind === 'atlassian_api_token' ? cred.token : undefined;
+
+    const headers = {
+      Authorization: authorization,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+    const url = `${baseUrl}/rest/api/3/issue/${encodeURIComponent(upstreamKey)}/transitions`;
+
+    try {
+      const listRes = await fetch(url, { headers });
+      if (listRes.status === 401) return { ok: false, reason: 'Jira refused the token (401). Re-sign in with Atlassian to grant write:jira-work.' };
+      if (listRes.status === 403) return { ok: false, reason: 'Jira refused the write (403). The token lacks the write:jira-work scope — re-sign in with Atlassian.' };
+      if (listRes.status === 404) return { ok: false, reason: `Jira says ${upstreamKey} does not exist or is not visible to this token.` };
+      if (!listRes.ok) {
+        const text = (await listRes.text().catch(() => '')).slice(0, 300);
+        return { ok: false, reason: `Jira list-transitions failed with ${listRes.status}: ${text}` };
+      }
+      const payload = (await listRes.json()) as { transitions?: JiraTransition[] };
+      const transitions = payload.transitions ?? [];
+      const pick = pickTransition(status, transitions);
+      if (pick === undefined) {
+        return { ok: false, reason: noTransitionMessage(status, transitions) };
+      }
+
+      const postRes = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ transition: { id: pick.id } }),
+      });
+      if (postRes.status === 204) return { ok: true };
+      if (postRes.status === 403) return { ok: false, reason: `Jira refused the transition (403): ${pick.name}. Check the workflow permissions for this project.` };
+      const text = (await postRes.text().catch(() => '')).slice(0, 300);
+      return { ok: false, reason: `Jira transition POST failed with ${postRes.status}: ${text}` };
+    } catch (err) {
+      throw reThrowRedacted(err, accessToken, refreshToken, apiToken);
+    }
   }
 }
 

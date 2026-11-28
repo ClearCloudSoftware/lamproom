@@ -74,8 +74,11 @@ export type SourceId =
  *   assignees               ParsedTask.assignees is populated when present.
  *   stable_upstream_key     the source's own id is stable enough to key on
  *                           (checked via UpstreamKeyPolicy at derive time).
+ *   write_back_status       applyStatus(upstreamKey, StatusId) is implemented;
+ *                           the board calls it after a card move so the
+ *                           source learns about the new status.
  *
- * Future flags (write_back, reactions, mentions, custom_fields) are deliberately
+ * Future flags (reactions, mentions, custom_fields) are deliberately
  * absent — add them when the adapter that needs them lands.
  */
 export type SourceCapability =
@@ -87,7 +90,8 @@ export type SourceCapability =
   | 'acceptance_criteria'
   | 'labels'
   | 'assignees'
-  | 'stable_upstream_key';
+  | 'stable_upstream_key'
+  | 'write_back_status';
 
 // ---------------------------------------------------------------------------
 // Task shape
@@ -211,4 +215,29 @@ export interface TaskProvider {
    * against `headers` BEFORE parsing JSON. Trust boundary, enforced.
    */
   ingest?(event: Buffer, headers: Record<string, string>): Promise<SourceResult>;
+
+  /**
+   * Write-back a status change to the source. Required when
+   * `write_back_status` is in capabilities.
+   *
+   * `upstreamKey` is the source's own id — the Jira key `KAN-5`, the GitHub
+   * issue number `42`, the markdown slug. Adapters receive the raw string
+   * and are responsible for resolving it against their API.
+   *
+   * `status` is a Lamproom `StatusId` from `@lamproom/core/board`. Adapters
+   * map it to their own workflow (Jira transition, GitHub close/reopen,
+   * markdown attribute rewrite) and return either:
+   *   - `{ ok: true }` on success
+   *   - `{ ok: false, reason }` when the move completed in Lamproom but
+   *     the source refused the write-back (e.g. no transition from the
+   *     current state to the target, or an auth scope missing). The
+   *     reason is user-facing and MUST have any credentials redacted.
+   *
+   * Thrown errors are treated as hard failures: the Lamproom-side move
+   * still stood (it ran before this was called), and the caller logs the
+   * exception and surfaces the message to the UI.
+   */
+  applyStatus?(upstreamKey: string, status: import('../board.ts').StatusId): Promise<WriteBackResult>;
 }
+
+export type WriteBackResult = { ok: true } | { ok: false; reason: string };

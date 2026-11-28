@@ -14,6 +14,7 @@ import { pendingStates, sweepStates } from '../../local.ts';
 
 const SCOPES = [
   'read:jira-work',
+  'write:jira-work',
   'read:jira-user',
   'read:jira:agent-interface',
   'search:jira:agent-interface',
