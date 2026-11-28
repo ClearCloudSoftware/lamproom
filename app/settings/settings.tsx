@@ -176,9 +176,8 @@ export function RepositoriesPage() {
 }
 
 // Intake And Import's TaskSource adapters that don't ship a settings page yet.
-// Jira and Markdown have shipping UIs — the rest follow in later plans.
+// Jira, Markdown and GitHub have shipping UIs — the rest follow in later plans.
 const TASK_PROVIDERS_SOON = [
-  { id: 'github', name: 'GitHub Issues', text: "A repository's issues as tasks, through the same GitHub CLI login as the repositories.", icon: CircleDot },
   { id: 'linear', name: 'Linear', text: "A team's issues as tasks.", icon: ListTodo },
   { id: 'webhook', name: 'Webhook', text: 'Any tool that can post JSON to Lamproom creates a task.', icon: Webhook },
 ];
@@ -226,10 +225,48 @@ export function TaskProvidersPage() {
       <Head title="Task providers">Where tasks come from, besides creating them by hand.</Head>
       <ul className={ul}>
         <JiraRow />
+        <GithubTasksRow />
         <MarkdownRow />
         <Soon items={TASK_PROVIDERS_SOON} />
       </ul>
     </>
+  );
+}
+
+function GithubTasksRow() {
+  const status = useQuery({
+    queryKey: ['github-tasks', 'auth-status'] as const,
+    queryFn: async () => {
+      const r = await fetch('/api/github-tasks/status');
+      if (!r.ok) throw new Error(`status ${r.status}`);
+      return (await r.json()) as { connected: boolean; defaultRepo?: { owner: string; repo: string } };
+    },
+  });
+  const s = status.data;
+  return (
+    <Row icon={icon(CircleDot)} name="GitHub Issues" text="A repository's open issues as tasks, via a Personal Access Token.">
+      <div className="grid gap-2 font-sans text-[13px]">
+        {status.isPending && <p className="m-0 text-xs text-muted-foreground">Checking…</p>}
+        {status.isError && <p className="m-0 text-xs text-fail">{status.error.message}</p>}
+        {s && (
+          s.connected ? (
+            <p className="m-0">
+              <span className="mr-1.5 inline-block size-[7px] bg-run align-middle" aria-hidden />
+              Token saved{s.defaultRepo !== undefined ? <> · default <b>{s.defaultRepo.owner}/{s.defaultRepo.repo}</b></> : null}
+            </p>
+          ) : (
+            <p className="m-0 border-l-[3px] border-wait bg-[var(--wait-soft)] px-2.5 py-1.5 text-wait">
+              No PAT saved.
+            </p>
+          )
+        )}
+        <div>
+          <Button size="sm" variant="outline" asChild>
+            <Link href="/settings/connections/tasks/github">Open GitHub settings</Link>
+          </Button>
+        </div>
+      </div>
+    </Row>
   );
 }
 

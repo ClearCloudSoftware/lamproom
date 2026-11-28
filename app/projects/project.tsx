@@ -29,6 +29,7 @@ import { PROJECT_TYPES, resolveSettings, ruleText } from '../../packages/cli/src
 import { appSettingsQuery, inProject, newRunHref, projectsQuery, removeProject, updateProject, usd } from './api.ts';
 import type { ProjectView } from './api.ts';
 import { Analysis } from './analysis.tsx';
+import { ImportFromGithub } from './import-github.tsx';
 import { ImportFromJira } from './import-jira.tsx';
 import { ImportMarkdown } from './import-markdown.tsx';
 import { Knowledge } from './knowledge.tsx';
@@ -41,6 +42,14 @@ import { Topbar } from './topbar.tsx';
 import { Loader } from '@/components/loader';
 
 const DOT: Record<RunStatus, string> = { starting: 'bg-run', running: 'bg-run', waiting: 'bg-wait', paused: 'bg-wait', done: 'bg-[var(--done)]', failed: 'bg-fail' };
+
+/** Split a project's `source.repo` into { owner, repo } when the project came from GitHub. */
+function githubDefaultFromSource(p: ProjectView): { owner: string; repo: string } | undefined {
+  if (p.source.kind !== 'github') return undefined;
+  const [owner, repo] = p.source.repo.split('/', 2);
+  if (!owner || !repo) return undefined;
+  return { owner, repo };
+}
 /** `2026-11-12T13-32-04-delivery` -> `2026-11-12 13:32:04`. */
 const when = (run: string) => run.slice(0, 19).replace('T', ' ').replace(/-(\d\d)-(\d\d)$/, ':$1:$2');
 
@@ -300,6 +309,7 @@ export function ProjectPage() {
             <Remove p={p} live={live} />
             <ImportMarkdown projectId={p.id} />
             <ImportFromJira projectId={p.id} />
+            <ImportFromGithub projectId={p.id} defaultOwnerRepo={githubDefaultFromSource(p)} />
             <Button size="sm" asChild>
               <Link href={newRunHref(p)}>
                 <Play aria-hidden /> New run

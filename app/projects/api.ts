@@ -30,6 +30,11 @@ export interface JiraStatus {
   defaultJql?: string;
 }
 
+export interface GithubTasksStatus {
+  connected: boolean;
+  defaultRepo?: { owner: string; repo: string };
+}
+
 export type ImportState = 'running' | 'done' | 'failed' | 'cancelled';
 
 /** One imported ticket. Mirrors the shape returned by GET /api/projects/<id>/tasks. */
@@ -180,6 +185,19 @@ export const startJiraImport = (projectId: string, jql?: string) => {
 /** Import a markdown backlog (pasted or uploaded text) into a project; returns the id so the UI can poll `importQuery`. */
 export const startMarkdownImport = (projectId: string, content: string) =>
   call<{ importId: string }>(`/api/import/markdown?${new URLSearchParams({ project: projectId }).toString()}`, { method: 'POST', body: JSON.stringify({ content }) });
+
+/** Whether a GitHub PAT is saved (used to decide if the "Import from GitHub" button is enabled). */
+export const githubTasksStatusQuery = queryOptions({ queryKey: ['github-tasks', 'auth-status'], queryFn: () => call<GithubTasksStatus>('/api/github-tasks/status'), refetchInterval: 30_000 });
+
+/** Kick off a GitHub Issues import; returns the id so the UI can poll `importQuery`. */
+export const startGithubImport = (projectId: string, target?: { owner: string; repo: string }) => {
+  const params = new URLSearchParams({ project: projectId });
+  if (target !== undefined) {
+    params.set('owner', target.owner);
+    params.set('repo', target.repo);
+  }
+  return call<{ importId: string; reused: boolean }>(`/api/import/github?${params.toString()}`, { method: 'POST', body: '{}' });
+};
 
 /** One import row, polled every 1.5s while running; the poll stops once state leaves 'running'. */
 export const importQuery = (importId: string) =>
