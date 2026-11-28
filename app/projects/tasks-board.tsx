@@ -22,14 +22,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Toggle } from '@/components/ui/toggle';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { STATUSES, TASK_TYPES, type StatusDef, type TaskType } from '../../packages/core/src/board.ts';
+import type { ProjectView } from '../../packages/cli/src/projects.ts';
 import { Topbar } from './topbar.tsx';
 import { projectsQuery, projectTasksQuery, type TaskRow } from './api.ts';
 import { effectiveFilters, groupColumn, indexTasks, taskId, type BoardIndex, type Filters } from './board-model.ts';
 import { countedKids, GroupBox, KidBar, TypeTag } from './board-group.tsx';
+import { ImportFromGithub } from './import-github.tsx';
+import { ImportFromJira } from './import-jira.tsx';
+import { ImportMarkdown } from './import-markdown.tsx';
 import { shownKey, sourceBadge, statusName, TaskSheet } from './task-sheet.tsx';
 
 const ALL_EPICS = 'all'; // a Select item can't have an empty value
 const byKey = (a: TaskRow, b: TaskRow) => a.importKey.localeCompare(b.importKey, undefined, { numeric: true });
+
+/** Split a project's `source.repo` into { owner, repo } when the project came from GitHub. */
+function githubDefaultFromSource(p: ProjectView): { owner: string; repo: string } | undefined {
+  if (p.source.kind !== 'github') return undefined;
+  const [owner, repo] = p.source.repo.split('/', 2);
+  if (!owner || !repo) return undefined;
+  return { owner, repo };
+}
 
 export function TasksBoard() {
   const { slug } = useParams<{ slug: string }>();
@@ -57,6 +69,13 @@ export function TasksBoard() {
   return (
     <div className="flex min-h-dvh flex-col text-[13px]">
       <Topbar slug={slug}>
+        {p && (
+          <>
+            <ImportMarkdown projectId={p.id} pinned={p.taskProvider ?? null} />
+            <ImportFromJira projectId={p.id} pinned={p.taskProvider ?? null} />
+            <ImportFromGithub projectId={p.id} pinned={p.taskProvider ?? null} defaultOwnerRepo={githubDefaultFromSource(p)} />
+          </>
+        )}
         {tasks.data && tasks.data.tasks.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <Select value={epic === '' ? ALL_EPICS : epic} onValueChange={(v) => setFilters((f) => ({ ...f, epic: v === ALL_EPICS ? '' : v }))}>
