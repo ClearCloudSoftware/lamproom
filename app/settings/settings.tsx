@@ -175,10 +175,9 @@ export function RepositoriesPage() {
   );
 }
 
-// Intake And Import's TaskSource adapters: markdown first, the rest later (Future Task Sources).
-// Jira is the first one with a shipping UI — the others follow in later plans.
+// Intake And Import's TaskSource adapters that don't ship a settings page yet.
+// Jira and Markdown have shipping UIs — the rest follow in later plans.
 const TASK_PROVIDERS_SOON = [
-  { id: 'markdown', name: 'Markdown backlog', text: 'A backlog file in a repo, imported as tasks; importing again updates them rather than adding copies.', icon: FileText },
   { id: 'github', name: 'GitHub Issues', text: "A repository's issues as tasks, through the same GitHub CLI login as the repositories.", icon: CircleDot },
   { id: 'linear', name: 'Linear', text: "A team's issues as tasks.", icon: ListTodo },
   { id: 'webhook', name: 'Webhook', text: 'Any tool that can post JSON to Lamproom creates a task.', icon: Webhook },
@@ -227,9 +226,30 @@ export function TaskProvidersPage() {
       <Head title="Task providers">Where tasks come from, besides creating them by hand.</Head>
       <ul className={ul}>
         <JiraRow />
+        <MarkdownRow />
         <Soon items={TASK_PROVIDERS_SOON} />
       </ul>
     </>
+  );
+}
+
+function MarkdownRow() {
+  return (
+    <Row
+      icon={icon(FileText)}
+      name="Markdown backlog"
+      text="A backlog file in a repo or pasted in — the importer agent maps it to tasks, with a deterministic parser as a fallback."
+    >
+      <div className="grid gap-2 font-sans text-[13px]">
+        <p className="m-0">
+          <span className="mr-1.5 inline-block size-[7px] bg-run align-middle" aria-hidden />
+          Available — no credentials needed.
+        </p>
+        <p className="m-0 text-xs text-muted-foreground">
+          Use <b>Import markdown</b> on any project page; the dialog takes a pasted backlog or a file in the repo.
+        </p>
+      </div>
+    </Row>
   );
 }
 
